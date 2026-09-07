@@ -12,7 +12,7 @@ require (
 	webtyp.com/image v0.1.3
 	webtyp.com/js v0.0.10
 	webtyp.com/modfind v0.0.9
-	webtyp.com/router v0.1.33
+	webtyp.com/router v0.1.34
 	webtyp.com/svg v0.3.5
 	webtyp.com/tinygo v1.0.1
 )
