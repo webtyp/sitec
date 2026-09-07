@@ -36,7 +36,7 @@ func (s *testSetup) cleanup() {
 	// t.TempDir handles cleanup
 }
 
-func newTestRouter(am *sitec.AssetMin) *mock.Router {
+func newTestRouter(am *sitec.Compiler) *mock.Router {
 	r := &mock.Router{}
 	serve.RegisterRoutes(r, am)
 	return r

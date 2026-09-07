@@ -15,7 +15,7 @@ import (
 // no una dependencia. Solo el error "dos raíces" falla el build.
 func TestSiteSoloElRaizDescribeElSitio(t *testing.T) {
 	var logs []string
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir: "/tmp/fake-root",
 	})
 	am.SetLog(func(msgs ...any) {
@@ -69,7 +69,7 @@ func TestSiteSoloElRaizDescribeElSitio(t *testing.T) {
 // caso imposible del extractor — dos módulos raíz declarando el sitio — y eso
 // es un fallo de build, no un aviso: hay dos autoridades sobre el mismo sitio.
 func TestSiteDosRaicesEsError(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 	am.SetLog(func(...any) {})
 
 	err := am.RouteExtractedAssets([]*sitec.Assets{

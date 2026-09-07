@@ -20,7 +20,7 @@ import (
 // module contributing icons after it. Rendering pages while still walking the
 // module list bakes in whatever the sprite happens to hold at that moment.
 func TestPagesCarryEveryModulesIcons(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{OutputDir: "web/public"})
+	am := sitec.NewCompiler(&sitec.Config{OutputDir: "web/public"})
 
 	pageOwner := &sitec.Assets{
 		ModuleName: "example.com/site",

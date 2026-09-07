@@ -17,7 +17,7 @@ func TestRegisterRoutes(t *testing.T) {
 		setup := newTestSetup(t)
 		defer setup.cleanup()
 
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 
 		// Add some content to trigger cache generation
 		if err := am.NewFileEvent("test.js", ".js", setup.createTempFile("test.js", "var a=1;"), "create"); err != nil {
@@ -48,7 +48,7 @@ func TestRegisterRoutes(t *testing.T) {
 		defer setup.cleanup()
 
 		setup.ac.AssetsURLPrefix = "/static/"
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 
 		if err := am.NewFileEvent("test.js", ".js", setup.createTempFile("test.js", "var b=2;"), "create"); err != nil {
 			t.Fatalf("Error processing JS creation: %v", err)
@@ -67,7 +67,7 @@ func TestRegisterRoutes(t *testing.T) {
 		setup := newTestSetup(t)
 		defer setup.cleanup()
 
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 
 		r := newTestRouter(am)
 
@@ -83,7 +83,7 @@ func TestSirveElEstadoActualNoElDelRegistro(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	f1 := setup.createTempFile("test1.css", ".a{color:red}")
 	if err := am.NewFileEvent("test1.css", ".css", f1, "create"); err != nil {
@@ -118,7 +118,7 @@ func TestUnArchivoAusenteEs404NoLaPortada(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	r := newTestRouter(am)
 
@@ -134,7 +134,7 @@ func TestElSpriteNoSeExponeComoRecurso(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	r := newTestRouter(am)
 
@@ -146,11 +146,11 @@ func TestElSpriteNoSeExponeComoRecurso(t *testing.T) {
 	}
 }
 
-func TestAssetMinWriteServiblePorHTTP(t *testing.T) {
+func TestCompilerWriteServiblePorHTTP(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	if err := am.Write("client.wasm", []byte("wasm-bytes"), "application/wasm"); err != nil {
 		t.Fatalf("am.Write client.wasm failed: %v", err)
@@ -173,7 +173,7 @@ func TestSpriteInjectedInHTML(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	// Inject an icon
 	err := am.InjectSpriteIcon("test-icon", "<path d='M0 0h1'/>", "0 0 16 16")
@@ -204,7 +204,7 @@ func TestWorks(t *testing.T) {
 		setup := newTestSetup(t)
 		defer setup.cleanup()
 
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 
 		err := am.NewFileEvent("test.css", ".css", setup.createTempFile("test.css", "body{color:red}"), "create")
 		if err != nil {
@@ -222,7 +222,7 @@ func TestWorks(t *testing.T) {
 		setup := newTestSetup(t)
 		defer setup.cleanup()
 
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 		if err := am.FlushToDisk(); err != nil {
 			t.Fatalf("FlushToDisk: %v", err)
 		}
@@ -247,7 +247,7 @@ func TestWorks(t *testing.T) {
 		defer setup.cleanup()
 
 		setup.ac.AssetsURLPrefix = "/assets"
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 
 		r := newTestRouter(am)
 
@@ -271,7 +271,7 @@ func TestWorks(t *testing.T) {
 		setup := newTestSetup(t)
 		defer setup.cleanup()
 
-		am := sitec.NewAssetMin(setup.ac)
+		am := sitec.NewCompiler(setup.ac)
 
 		am.InjectHTML("<div id='custom'>Injected</div>")
 

@@ -117,13 +117,13 @@ func (s *SpecialtyPages) RenderPages() []html.Page {
 		t.Errorf("unexpected second page: %+v", p2)
 	}
 
-	// Now route extracted assets with AssetMin and verify emitted HTML
+	// Now route extracted assets with Compiler and verify emitted HTML
 	outDir := filepath.Join(tmpDir, "web", "public")
 	ac := &sitec.Config{
 		OutputDir: outDir,
 		SiteURL:   "https://clinicachillan.cl",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	if err := am.RouteExtractedAssets(all); err != nil {
 		t.Fatalf("RouteExtractedAssets failed: %v", err)

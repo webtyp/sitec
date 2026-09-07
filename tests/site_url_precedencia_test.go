@@ -15,7 +15,7 @@ import (
 // con los dos valores. El sitemap se construye con la URL efectiva.
 func TestSiteURLMandaSobreConfig(t *testing.T) {
 	var logs []string
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir: "/tmp/fake-root",
 		SiteURL: "https://caller.example",
 	})
@@ -64,7 +64,7 @@ func TestSiteURLMandaSobreConfig(t *testing.T) {
 // TestSiteURLSinConflictos: cuando coinciden, no hay aviso.
 func TestSiteURLSinConflictos(t *testing.T) {
 	var logs []string
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir: "/tmp/fake-root",
 		SiteURL: "https://acme.example",
 	})

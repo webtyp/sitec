@@ -15,7 +15,7 @@ func TestEmitSitemap_WithSiteURL(t *testing.T) {
 		OutputDir: "web/public",
 		SiteURL:   "https://clinic.example.com",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	assets := &sitec.Assets{
 		ModuleName: "example.com/clinic",
@@ -59,7 +59,7 @@ func TestEmitSitemap_WithoutSiteURL(t *testing.T) {
 		OutputDir: "web/public",
 		SiteURL:   "", // Empty SiteURL
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	assets := &sitec.Assets{
 		ModuleName: "example.com/clinic",

@@ -32,7 +32,7 @@ func TestLoader_CssDefaultWins_NoAppRoot(t *testing.T) {
 
 func TestLoader_AppFullyReplacesCss(t *testing.T) {
 	// Re-initialize to ensure clean state
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 
 	// Mock extraction and slot routing
 	am.UpdateSSRModuleInSlot("webtyp/css", ":root{--css:1;}", nil, "", nil, "open")
@@ -61,7 +61,7 @@ func TestLoader_ThirdPartyIgnored(t *testing.T) {
 	// Since we are mocking with UpdateSSRModuleInSlot, we just prove that
 	// only one winner is allowed in the 'open' slot by the handler if we manage it correctly.
 
-	// In the real AssetMin, resolveAndApplyRootCSS handles the single-winner logic.
+	// In the real Compiler, resolveAndApplyRootCSS handles the single-winner logic.
 	// RegisterComponents also uses this logic.
 
 	output, _ := am.GetMinifiedCSS()

@@ -82,7 +82,7 @@ func msgNoFavicon() string {
 		"pages", "will", "have", "no", "icon").String()
 }
 
-type AssetMin struct {
+type Compiler struct {
 	mu sync.Mutex // Mutex for synchronization
 	*Config
 	mainStyleCssHandler *asset
@@ -119,7 +119,7 @@ type AssetMin struct {
 	directArtifacts     []Artifact // pre-built binaries written via Write(), e.g. the WASM binary
 }
 
-func (c *AssetMin) SetFS(fs FS) {
+func (c *Compiler) SetFS(fs FS) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.fs = fs
@@ -128,20 +128,20 @@ func (c *AssetMin) SetFS(fs FS) {
 // SetMinifyEnabled toggles minification on or off. The consumer (app's TUI
 // minify toggle) owns the UI; this is the only way to reach the flag, which
 // was private before — activeMinifier() is the sole reader.
-func (c *AssetMin) SetMinifyEnabled(enabled bool) {
+func (c *Compiler) SetMinifyEnabled(enabled bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.minifyEnabled = enabled
 }
 
 // MinifyEnabled reports whether minification is currently on.
-func (c *AssetMin) MinifyEnabled() bool {
+func (c *Compiler) MinifyEnabled() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.minifyEnabled
 }
 
-func (c *AssetMin) SetWasm(filename string, runtime string) {
+func (c *Compiler) SetWasm(filename string, runtime string) {
 	c.wasmMu.Lock()
 	defer c.wasmMu.Unlock()
 	c.wasmFilename = filename
@@ -158,26 +158,26 @@ type SSRExtractor interface {
 	ExtractAll() ([]*Assets, error)
 }
 
-func (c *AssetMin) activeMinifier() *minify.M {
+func (c *Compiler) activeMinifier() *minify.M {
 	if c.minifyEnabled {
 		return c.min
 	}
 	return nil
 }
 
-func (c *AssetMin) SetSSRExtractor(e SSRExtractor) {
+func (c *Compiler) SetSSRExtractor(e SSRExtractor) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.ssrExtractor = e
 }
 
-func (c *AssetMin) SetImageProcessor(ip ImageProcessor) {
+func (c *Compiler) SetImageProcessor(ip ImageProcessor) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.imageProcessor = ip
 }
 
-func (c *AssetMin) LoadSSRModules() {
+func (c *Compiler) LoadSSRModules() {
 	c.mu.Lock()
 	c.ssrEnabled = true
 	c.mu.Unlock()
@@ -209,7 +209,7 @@ func (c *AssetMin) LoadSSRModules() {
 // AssetsHandler does) can still reach routing: routeAssets and
 // resolveAndApplyRootCSS are unexported, and Go does not promote them through
 // embedding across package boundaries.
-func (c *AssetMin) RouteExtractedAssets(all []*Assets) error {
+func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -409,7 +409,7 @@ func (c *AssetMin) RouteExtractedAssets(all []*Assets) error {
 	return nil
 }
 
-func (c *AssetMin) ReloadSSRModule(moduleDir string) error {
+func (c *Compiler) ReloadSSRModule(moduleDir string) error {
 	c.mu.Lock()
 	failed := c.InitialLoadFailed
 	c.mu.Unlock()
@@ -448,7 +448,7 @@ func (c *AssetMin) ReloadSSRModule(moduleDir string) error {
 	return err
 }
 
-func (c *AssetMin) WaitForSSRLoad(timeout time.Duration) {
+func (c *Compiler) WaitForSSRLoad(timeout time.Duration) {
 	ch := make(chan struct{})
 	go func() {
 		c.ssrLoading.Wait()
@@ -474,8 +474,8 @@ type Config struct {
 	SiteURL         string // Optional: canonical base URL (e.g. "https://example.com"), used for sitemap.xml and canonical URL resolution
 }
 
-func NewAssetMin(ac *Config) *AssetMin {
-	c := &AssetMin{
+func NewCompiler(ac *Config) *Compiler {
+	c := &Compiler{
 		Config:           ac,
 		min:              minify.New(),
 		minifyEnabled:    true,
@@ -560,36 +560,36 @@ func NewAssetMin(ac *Config) *AssetMin {
 	return c
 }
 
-func (c *AssetMin) Name() string {
+func (c *Compiler) Name() string {
 	return "ASSETS"
 }
 
-func (c *AssetMin) SetLog(f func(message ...any)) {
+func (c *Compiler) SetLog(f func(message ...any)) {
 	c.log = f
 }
 
-func (c *AssetMin) Logger(messages ...any) {
+func (c *Compiler) Logger(messages ...any) {
 	if c.log != nil {
 		c.log(messages...)
 	}
 }
 
-func (c *AssetMin) SupportedExtensions() []string {
+func (c *Compiler) SupportedExtensions() []string {
 	return []string{".js", ".css", ".svg", ".html"}
 }
 
-func (c *AssetMin) writeMessage(messages ...any) {
+func (c *Compiler) writeMessage(messages ...any) {
 	c.Logger(messages...)
 }
 
-func (c *AssetMin) EnsureOutputDirectoryExists() {
+func (c *Compiler) EnsureOutputDirectoryExists() {
 	outputDir := c.OutputDir
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		c.writeMessage("dont create output dir", err)
 	}
 }
 
-func (c *AssetMin) refreshAsset(extension string) {
+func (c *Compiler) refreshAsset(extension string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -617,7 +617,7 @@ func (c *AssetMin) refreshAsset(extension string) {
 
 // RefreshJSAssets triggers a refresh of JS assets.
 // Call this when the WASM binary changes to ensure they are up to date.
-func (c *AssetMin) RefreshJSAssets() {
+func (c *Compiler) RefreshJSAssets() {
 	c.refreshAsset(".js")
 }
 
@@ -651,8 +651,8 @@ func findIndex(s string, substr string) int {
 	return -1
 }
 
-// FS implementation for AssetMin:
-func (c *AssetMin) Read(p string) ([]byte, string, bool) {
+// FS implementation for Compiler:
+func (c *Compiler) Read(p string) ([]byte, string, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -731,7 +731,7 @@ func (c *AssetMin) Read(p string) ([]byte, string, bool) {
 // RegenerateCache made minifier.Bytes return ErrNotExist — an error that
 // FlushToDisk's loop silently discarded, leaving the artifact's cache empty and
 // the file written to disk at 0 bytes.
-func (c *AssetMin) Write(outPath string, content []byte, mediatype string) error {
+func (c *Compiler) Write(outPath string, content []byte, mediatype string) error {
 	c.mu.Lock()
 	fs := c.fs
 	outputDir := ""
@@ -758,7 +758,7 @@ func (c *AssetMin) Write(outPath string, content []byte, mediatype string) error
 	return fs.Write(fullPath, content, mediatype)
 }
 
-func (c *AssetMin) List() []Artifact {
+func (c *Compiler) List() []Artifact {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var out []Artifact

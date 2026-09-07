@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestAssetMin_AddAssets(t *testing.T) {
+func TestCompiler_AddAssets(t *testing.T) {
 	env := setupTestEnv("add_assets", t)
 	am := env.AssetsHandler
 

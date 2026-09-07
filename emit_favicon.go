@@ -7,13 +7,13 @@ import (
 	"webtyp.com/image/favicon"
 )
 
-func (c *AssetMin) setFaviconFiles(files []favicon.File) {
+func (c *Compiler) setFaviconFiles(files []favicon.File) {
 	c.faviconMu.Lock()
 	defer c.faviconMu.Unlock()
 	c.faviconFiles = files
 }
 
-func (c *AssetMin) getFaviconFiles() []favicon.File {
+func (c *Compiler) getFaviconFiles() []favicon.File {
 	c.faviconMu.RLock()
 	defer c.faviconMu.RUnlock()
 	cp := make([]favicon.File, len(c.faviconFiles))
@@ -21,7 +21,7 @@ func (c *AssetMin) getFaviconFiles() []favicon.File {
 	return cp
 }
 
-func (c *AssetMin) hasManualFaviconContent() bool {
+func (c *Compiler) hasManualFaviconContent() bool {
 	if c.faviconSvgHandler == nil {
 		return false
 	}
@@ -48,7 +48,7 @@ func (c *AssetMin) hasManualFaviconContent() bool {
 	return false
 }
 
-func (c *AssetMin) getFirstFaviconURL() string {
+func (c *Compiler) getFirstFaviconURL() string {
 	c.faviconMu.RLock()
 	for _, f := range c.faviconFiles {
 		if f.Rel != "" {
@@ -99,7 +99,7 @@ func buildFaviconHeadLinks(files []favicon.File, prefix string) []byte {
 	return []byte(sb.String())
 }
 
-func (c *AssetMin) updateHtmlFaviconLinks() {
+func (c *Compiler) updateHtmlFaviconLinks() {
 	files := c.getFaviconFiles()
 	prefix := ""
 	if c.Config != nil {

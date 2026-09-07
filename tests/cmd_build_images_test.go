@@ -107,7 +107,7 @@ func RenderCSS() *css.Stylesheet {
 		{Path: "example.com/imgtest", Dir: tmpDir},
 	})
 
-	// Set up Extractor and AssetMin mimicking sitec build
+	// Set up Extractor and Compiler mimicking sitec build
 	e := sitec.New(tmpDir)
 	e.SetFinder(fFinder)
 	all, err := e.ExtractAll()
@@ -115,7 +115,7 @@ func RenderCSS() *css.Stylesheet {
 		t.Fatalf("ExtractAll failed: %v", err)
 	}
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: outDir,
 		RootDir:   tmpDir,
 	})

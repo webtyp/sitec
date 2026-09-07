@@ -8,7 +8,7 @@ import (
 )
 
 // EnableSSRMode activates the SSR event branch unconditionally. Pure setter.
-func (c *AssetMin) EnableSSRMode() {
+func (c *Compiler) EnableSSRMode() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.ssrEnabled = true
@@ -16,7 +16,7 @@ func (c *AssetMin) EnableSSRMode() {
 
 // SetSSRCompiler registers a Go compiler callback. Pure setter — does NOT invoke fn.
 // Pass nil to unregister.
-func (c *AssetMin) SetSSRCompiler(fn func() error) {
+func (c *Compiler) SetSSRCompiler(fn func() error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.onSSRCompile = fn
@@ -26,7 +26,7 @@ func (c *AssetMin) SetSSRCompiler(fn func() error) {
 // "/acerca/") to its path under OutputDir. An artifact's identity is its URL;
 // disk is only a projection of it. Shared with Output.diskPath (build.go) —
 // one formula, two consumers.
-func (c *AssetMin) artifactDiskPath(urlPath string) string {
+func (c *Compiler) artifactDiskPath(urlPath string) string {
 	rel := strings.TrimPrefix(urlPath, "/")
 	if rel == "" {
 		rel = "index.html"
@@ -41,7 +41,7 @@ func (c *AssetMin) artifactDiskPath(urlPath string) string {
 // the WASM binary — anything registered via Write instead of the minifier
 // pipeline), writes them to disk (overwrite), and sets diskMirrored = true
 // only if every write across both batches succeeds. Returns the first error.
-func (c *AssetMin) FlushToDisk() error {
+func (c *Compiler) FlushToDisk() error {
 	type snapshot struct {
 		path      string
 		content   []byte
@@ -92,7 +92,7 @@ func (c *AssetMin) FlushToDisk() error {
 
 // DiskMirrored reports whether FlushToDisk has already succeeded, and
 // therefore every subsequent asset regeneration is being mirrored to disk.
-func (c *AssetMin) DiskMirrored() bool {
+func (c *Compiler) DiskMirrored() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.diskMirrored
@@ -100,6 +100,6 @@ func (c *AssetMin) DiskMirrored() bool {
 
 // isSSRMode returns true if the package is being used as a dependency (SSR mode).
 // It assumes the caller holds c.mu.
-func (c *AssetMin) isSSRMode() bool {
+func (c *Compiler) isSSRMode() bool {
 	return c.ssrEnabled
 }

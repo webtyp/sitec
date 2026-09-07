@@ -13,7 +13,7 @@ import (
 // isRoot=false para el mismo módulo). Tras la segunda llamada debe quedar
 // UNA sola entrada, con el contenido nuevo, y ninguna en el slot viejo.
 func TestUpdateSSRModuleInSlot_ReplacesAcrossSlots(t *testing.T) {
-	c := sitec.NewAssetMin(&sitec.Config{OutputDir: t.TempDir()})
+	c := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir()})
 
 	if err := c.UpdateSSRModuleInSlot("mod", ".mod{color:blue}", nil, "", nil, "close"); err != nil {
 		t.Fatal(err)
@@ -37,7 +37,7 @@ func TestUpdateSSRModuleInSlot_ReplacesAcrossSlots(t *testing.T) {
 }
 
 func TestUpdateContentInSlot_NewEntriesInsertSortedByPath(t *testing.T) {
-	c := sitec.NewAssetMin(&sitec.Config{OutputDir: t.TempDir()})
+	c := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir()})
 
 	// Arrival order deliberately NOT sorted: zeta, then alpha, then beta.
 	if err := c.UpdateSSRModuleInSlot("zeta", ".z{}", nil, "", nil, "middle"); err != nil {
@@ -94,7 +94,7 @@ func (f *fakeExtractor) ExtractModule(dir string) (*sitec.Assets, error) {
 }
 
 func TestReloadSSRModule_RetriesFullScanAfterPermanentExtractAllFailure(t *testing.T) {
-	c := sitec.NewAssetMin(&sitec.Config{OutputDir: t.TempDir(), RootDir: t.TempDir()})
+	c := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir(), RootDir: t.TempDir()})
 
 	extractAllCalls := 0
 	c.SetSSRExtractor(&fakeExtractor{

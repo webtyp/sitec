@@ -15,7 +15,7 @@ import (
 // salida sería el shell de una aplicación: publicarla sin un solo error es
 // exactamente la clase de fallo silencioso que este check elimina.
 func TestSiteSinPagesEsError(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 	am.SetLog(func(...any) {})
 
 	err := am.RouteExtractedAssets([]*sitec.Assets{
@@ -39,7 +39,7 @@ func TestSiteSinPagesEsError(t *testing.T) {
 // con páginas SSR sigue siendo un caso válido, solo está incompleta.
 func TestSiteAusenteEnProyectoConPages(t *testing.T) {
 	var logs []string
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir: "/tmp/fake-root",
 	})
 	am.SetLog(func(msgs ...any) {

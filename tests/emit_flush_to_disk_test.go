@@ -110,7 +110,7 @@ func TestFlushToDisk_ReturnsErrorOnWriteFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: filepath.Join(unwritablePath, "subdir"), // This will fail because 'unwritable' is a file
 	})
 
@@ -217,7 +217,7 @@ func TestFlushToDisk_WritesDirectArtifacts(t *testing.T) {
 
 // B3 / §1 — EnableSSRMode activates the SSR event branch without any compiler set.
 func TestEnableSSRMode_StandaloneFlag(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: t.TempDir(),
 	})
 
@@ -235,7 +235,7 @@ func TestEnableSSRMode_StandaloneFlag(t *testing.T) {
 
 // B3 / §1 — SetSSRCompiler is a pure setter; must NOT invoke fn at registration.
 func TestSetSSRCompiler_DoesNotAutoInvoke(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: t.TempDir(),
 	})
 
@@ -248,7 +248,7 @@ func TestSetSSRCompiler_DoesNotAutoInvoke(t *testing.T) {
 
 // B3 / §1 — SetSSRCompiler(nil) clears any previously registered compiler.
 func TestSetSSRCompiler_NilUnregisters(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: t.TempDir(),
 	})
 

@@ -51,11 +51,17 @@ type Manifest struct {
 	Status    string     `json:"status"`
 	Command   string     `json:"command"`
 	Artifacts []Artifact `json:"artifacts"`
+	Routes    []Route    `json:"routes,omitempty"`
 }
 
 type Artifact struct {
 	Path      string `json:"path"`
 	Mediatype string `json:"mediatype"`
+}
+
+type Route struct {
+	Method string `json:"method"`
+	Path   string `json:"path"`
 }
 
 func runBuild(args []string) {
@@ -95,10 +101,19 @@ func runBuild(args []string) {
 		})
 	}
 
+	var routes []Route
+	for _, r := range site.Routes() {
+		routes = append(routes, Route{
+			Method: r.Method,
+			Path:   r.Path,
+		})
+	}
+
 	manifest := Manifest{
 		Status:    "success",
 		Command:   "build",
 		Artifacts: artifacts,
+		Routes:    routes,
 	}
 
 	jsonBytes, err := json.MarshalIndent(manifest, "", "  ")

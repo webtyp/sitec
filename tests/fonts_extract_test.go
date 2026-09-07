@@ -53,9 +53,15 @@ func fontModuleDir(t *testing.T) string {
 	// Fallback to the mod cache path dynamically
 	gomodCache := getGomodCache()
 	if gomodCache != "" {
-		fallback := filepath.Join(gomodCache, "github.com", "webtyp", "font@v0.0.4")
-		if _, err := os.Stat(filepath.Join(fallback, "go.mod")); err == nil {
-			return fallback
+		for _, ver := range []string{"v0.0.5", "v0.0.4"} {
+			fallback := filepath.Join(gomodCache, "webtyp.com", "font@"+ver)
+			if _, err := os.Stat(filepath.Join(fallback, "go.mod")); err == nil {
+				return fallback
+			}
+			fallbackOld := filepath.Join(gomodCache, "github.com", "webtyp", "font@"+ver)
+			if _, err := os.Stat(filepath.Join(fallbackOld, "go.mod")); err == nil {
+				return fallbackOld
+			}
 		}
 	}
 	t.Fatalf("font module not found at %s or fallback GOMODCACHE", abs)

@@ -19,7 +19,7 @@ type TestEnvironment struct {
 	MainCssPath   string
 	MainSvgPath   string
 	MainHtmlPath  string
-	AssetsHandler *sitec.AssetMin
+	AssetsHandler *sitec.Compiler
 	t             *testing.T
 	OutDir        string
 }
@@ -41,10 +41,10 @@ func (env *TestEnvironment) CleanDirectory() {
 	}
 }
 
-// setupTestEnv configures a minimal environment for testing AssetMin
+// setupTestEnv configures a minimal environment for testing Compiler
 // default write to disk is true, but can be set to false for testing purposes
 // objects param can contain *sitec.ContentFile instances which will be written to disk
-// before the AssetMin handler is created
+// before the Compiler handler is created
 func setupTestEnv(testCase string, t *testing.T, objects ...any) *TestEnvironment {
 	// Create real directory instead of a temporary one
 	baseDir := t.TempDir()
@@ -70,7 +70,7 @@ func setupTestEnv(testCase string, t *testing.T, objects ...any) *TestEnvironmen
 	}
 
 	// Create asset handler.
-	assetsHandler := sitec.NewAssetMin(ac)
+	assetsHandler := sitec.NewCompiler(ac)
 
 	return &TestEnvironment{
 		BaseDir:       baseDir,

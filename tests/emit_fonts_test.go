@@ -54,7 +54,7 @@ func TestFonts_CopyAndFontFaceCSS(t *testing.T) {
 	fontDir := filepath.Join(root, "config", "fonts")
 	writeFaceFiles(t, fontDir, "Roboto", nil)
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir:         root,
 		OutputDir:       out,
 		AssetsURLPrefix: "assets",
@@ -124,7 +124,7 @@ func TestFonts_MissingFaceErrors(t *testing.T) {
 	writeFaceFiles(t, fontDir, "Roboto", styleSkip{font.Bold: true})
 
 	var logs []string
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir:   root,
 		OutputDir: out,
 	})
@@ -158,7 +158,7 @@ func TestFonts_SkipCopyWhenUpToDate(t *testing.T) {
 	fontDir := filepath.Join(root, "config", "fonts")
 	writeFaceFiles(t, fontDir, "Roboto", nil)
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir:   root,
 		OutputDir: out,
 	})
@@ -212,7 +212,7 @@ func TestFonts_NonRootIgnored(t *testing.T) {
 	writeFaceFiles(t, fontDir, "Roboto", nil)
 
 	var logs []string
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir:   root,
 		OutputDir: out,
 	})
@@ -251,7 +251,7 @@ func TestFonts_NonRootIgnored(t *testing.T) {
 
 func TestFonts_NoDeclarationNoOp(t *testing.T) {
 	root := t.TempDir()
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir:   root,
 		OutputDir: t.TempDir(),
 	})
@@ -285,7 +285,7 @@ func TestFonts_HotReloadUpdatesCSS(t *testing.T) {
 		IsRoot:     true,
 		Fonts:      font.Declare("Roboto", "config/fonts"),
 	}}
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		RootDir:         root,
 		OutputDir:       out,
 		AssetsURLPrefix: "assets",
@@ -335,7 +335,7 @@ func toString(v any) string {
 }
 
 type mockWatcher struct {
-	am *sitec.AssetMin
+	am *sitec.Compiler
 }
 
 func (w *mockWatcher) NewFileEvent(fileName, extension, filePath, event string) error {
@@ -345,6 +345,6 @@ func (w *mockWatcher) NewFileEvent(fileName, extension, filePath, event string) 
 	return nil
 }
 
-func newSSRFileWatcher(am *sitec.AssetMin) *mockWatcher {
+func newSSRFileWatcher(am *sitec.Compiler) *mockWatcher {
 	return &mockWatcher{am: am}
 }

@@ -146,9 +146,9 @@ func RootCSS() stylesheet {
 	}
 
 	// Then the actual contract a running app depends on: wire the SAME
-	// extractor into a real AssetMin exactly like webtyp/app's
+	// extractor into a real Compiler exactly like webtyp/app's
 	// section-build.go does, and check what gets SERVED.
-	am := sitec.NewAssetMin(&sitec.Config{OutputDir: t.TempDir()})
+	am := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir()})
 	am.SetSSRExtractor(e)
 	am.LoadSSRModules()
 	am.WaitForSSRLoad(10 * time.Second)

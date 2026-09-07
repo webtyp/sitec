@@ -62,7 +62,7 @@ func TestFaviconProcessing(t *testing.T) {
 func TestFaviconCacheHeaders(t *testing.T) {
 	setup := newTestSetup(t)
 	setup.ac.DevMode = true
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	faviconPath := filepath.Join(t.TempDir(), "favicon.svg")
 	os.WriteFile(faviconPath, []byte(`<svg xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40"/></svg>`), 0644)
