@@ -2,6 +2,8 @@
 PLAN: "feat!: rename AssetMin to Compiler; read declared routes; check path collisions"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 14523475300251716881
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
