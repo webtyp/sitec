@@ -17,7 +17,7 @@ type htmlProvider interface{ RenderHTML() string }
 type svgProvider interface{ IconSvg() *sprite.Sprite }
 
 // RegisterComponents registra structs que implementan las interfaces SSR.
-func (c *AssetMin) RegisterComponents(providers ...any) error {
+func (c *Compiler) RegisterComponents(providers ...any) error {
 	for _, p := range providers {
 		var css, html string
 		var scripts []*js.Script
@@ -55,12 +55,12 @@ func (c *AssetMin) RegisterComponents(providers ...any) error {
 }
 
 // UpdateSSRModule inyecta o reemplaza los assets de un módulo por nombre en el slot por defecto (middle).
-func (c *AssetMin) UpdateSSRModule(name string, css string, scripts []*js.Script, html string, icons *sprite.Sprite) error {
+func (c *Compiler) UpdateSSRModule(name string, css string, scripts []*js.Script, html string, icons *sprite.Sprite) error {
 	return c.UpdateSSRModuleInSlot(name, css, scripts, html, icons, "middle")
 }
 
 // UpdateSSRModuleInSlot inyecta o reemplaza los assets de un módulo en el slot especificado.
-func (c *AssetMin) UpdateSSRModuleInSlot(name string, css string, scripts []*js.Script, html string, icons *sprite.Sprite, slot string) error {
+func (c *Compiler) UpdateSSRModuleInSlot(name string, css string, scripts []*js.Script, html string, icons *sprite.Sprite, slot string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.updateSSRModuleInSlot(name, css, scripts, html, icons, slot)
@@ -79,7 +79,7 @@ func validateStandaloneName(name string) error {
 // con slot distinto (p. ej. ExtractAll con IsRoot=true y luego un reload con
 // IsRoot=false para el mismo módulo) apilan un duplicado en vez de
 // reemplazar, y el duplicado viejo puede ganar la cascada CSS.
-func (c *AssetMin) enforceSingleSlot(name, slot string) {
+func (c *Compiler) enforceSingleSlot(name, slot string) {
 	for _, other := range [2]string{"middle", "close"} {
 		if other == slot {
 			continue
@@ -90,7 +90,7 @@ func (c *AssetMin) enforceSingleSlot(name, slot string) {
 	}
 }
 
-func (c *AssetMin) updateSSRModuleInSlot(name string, css string, scripts []*js.Script, html string, icons *sprite.Sprite, slot string) error {
+func (c *Compiler) updateSSRModuleInSlot(name string, css string, scripts []*js.Script, html string, icons *sprite.Sprite, slot string) error {
 	c.enforceSingleSlot(name, slot) // NUEVO — primera línea
 
 	if css != "" {

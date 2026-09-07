@@ -8,73 +8,73 @@ import (
 )
 
 // ContainsCSS checks if the CSS bundle contains the given substring.
-func (c *AssetMin) ContainsCSS(substr string) bool {
+func (c *Compiler) ContainsCSS(substr string) bool {
 	return c.mainStyleCssHandler.containsContent(substr)
 }
 
 // ContainsJS checks if the JS bundle contains the given substring.
-func (c *AssetMin) ContainsJS(substr string) bool {
+func (c *Compiler) ContainsJS(substr string) bool {
 	return c.mainJsHandler.containsContent(substr)
 }
 
 // ContainsSVG checks if the SVG sprite contains the given substring.
-func (c *AssetMin) ContainsSVG(substr string) bool {
+func (c *Compiler) ContainsSVG(substr string) bool {
 	return strings.Contains(c.renderSprite(), substr)
 }
 
 // ContainsHTML checks if the HTML bundle contains the given substring.
-func (c *AssetMin) ContainsHTML(substr string) bool {
+func (c *Compiler) ContainsHTML(substr string) bool {
 	return c.indexHtmlHandler.containsContent(substr)
 }
 
 // HasIcon checks if an icon with the given ID is registered.
-func (c *AssetMin) HasIcon(id string) bool {
+func (c *Compiler) HasIcon(id string) bool {
 	current := c.renderSprite()
 	return strings.Contains(current, "id=\""+id+"\"") || strings.Contains(current, "id='"+id+"'")
 }
 
 // GetMinifiedJS returns the minified content of the JS bundle.
-func (c *AssetMin) GetMinifiedJS() ([]byte, error) {
+func (c *Compiler) GetMinifiedJS() ([]byte, error) {
 	return c.mainJsHandler.GetMinifiedContent(c.min)
 }
 
 // GetMinifiedCSS returns the minified content of the CSS bundle.
-func (c *AssetMin) GetMinifiedCSS() ([]byte, error) {
+func (c *Compiler) GetMinifiedCSS() ([]byte, error) {
 	return c.mainStyleCssHandler.GetMinifiedContent(c.min)
 }
 
 // GetMainJsPath returns the output path of the main JS file.
-func (c *AssetMin) GetMainJsPath() string {
+func (c *Compiler) GetMainJsPath() string {
 	return c.mainJsHandler.outputPath
 }
 
 // GetMainCssPath returns the output path of the main CSS file.
-func (c *AssetMin) GetMainCssPath() string {
+func (c *Compiler) GetMainCssPath() string {
 	return c.mainStyleCssHandler.outputPath
 }
 
 // GetMainSvgPath returns the output path of the main SVG file.
-func (c *AssetMin) GetMainSvgPath() string {
+func (c *Compiler) GetMainSvgPath() string {
 	return c.spriteSvgHandler.outputPath
 }
 
 // GetMainHtmlPath returns the output path of the main HTML file.
-func (c *AssetMin) GetMainHtmlPath() string {
+func (c *Compiler) GetMainHtmlPath() string {
 	return c.indexHtmlHandler.outputPath
 }
 
 // RegenerateHTMLCache forces regeneration of the HTML cache.
-func (c *AssetMin) RegenerateHTMLCache() error {
+func (c *Compiler) RegenerateHTMLCache() error {
 	return c.indexHtmlHandler.RegenerateCache(c.min)
 }
 
 // GetCachedHTML returns the cached minified HTML content.
-func (c *AssetMin) GetCachedHTML() []byte {
+func (c *Compiler) GetCachedHTML() []byte {
 	return c.indexHtmlHandler.GetCachedMinified()
 }
 
 // IsSSRMode returns true if the package is being used as a dependency (SSR mode).
-func (c *AssetMin) IsSSRMode() bool {
+func (c *Compiler) IsSSRMode() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.isSSRMode()
@@ -96,27 +96,27 @@ func StripLeadingUseStrict(b []byte) []byte {
 }
 
 // GetInitCodeJS returns the init code for the JS bundle.
-func (c *AssetMin) GetInitCodeJS() (string, error) {
+func (c *Compiler) GetInitCodeJS() (string, error) {
 	return c.startCodeJS()
 }
 
 // GetJSURLPath returns the URL path for the main JS file.
-func (c *AssetMin) GetJSURLPath() string {
+func (c *Compiler) GetJSURLPath() string {
 	return c.mainJsHandler.GetURLPath()
 }
 
 // GetCSSURLPath returns the URL path for the main CSS file.
-func (c *AssetMin) GetCSSURLPath() string {
+func (c *Compiler) GetCSSURLPath() string {
 	return c.mainStyleCssHandler.GetURLPath()
 }
 
 // GetSVGURLPath returns the URL path for the SVG sprite file.
-func (c *AssetMin) GetSVGURLPath() string {
+func (c *Compiler) GetSVGURLPath() string {
 	return c.spriteSvgHandler.GetURLPath()
 }
 
 // GetFaviconURLPath returns the URL path for the favicon file.
-func (c *AssetMin) GetFaviconURLPath() string {
+func (c *Compiler) GetFaviconURLPath() string {
 	if url := c.getFirstFaviconURL(); url != "" {
 		return url
 	}

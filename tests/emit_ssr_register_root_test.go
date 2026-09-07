@@ -24,7 +24,7 @@ func (p *rootAndCssProvider) RenderCSS() *css.Stylesheet {
 }
 
 func TestRegister_RootCssProvider_NonEmpty(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 	p := &rootProvider{}
 	if err := am.RegisterComponents(p); err != nil {
 		t.Fatal(err)
@@ -46,7 +46,7 @@ type rootProviderB struct{}
 func (p *rootProviderB) RootCSS() *css.Stylesheet { return css.NewStylesheet(css.Raw(":root{--b:1;}")) }
 
 func TestRegister_RootCssOverrides(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 
 	am.RegisterComponents(&rootProviderA{})
 	cssStr, _ := am.GetMinifiedCSS()
@@ -62,7 +62,7 @@ func TestRegister_RootCssOverrides(t *testing.T) {
 }
 
 func TestRegister_RootAndCssProvider(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 	p := &rootAndCssProvider{}
 	am.RegisterComponents(p)
 

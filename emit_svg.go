@@ -20,7 +20,7 @@ func NewFaviconSvgHandler(ac *Config, filename string) *asset {
 // pure function of sprites and used to be reimplemented here, diverging from
 // sprite.Merge. This function now owns only the ORDER — sorted by module name so
 // the result is stable across scans.
-func (c *AssetMin) renderSpriteNoLock() string {
+func (c *Compiler) renderSpriteNoLock() string {
 	var keys []string
 	for k := range c.moduleSprites {
 		keys = append(keys, k)
@@ -36,13 +36,13 @@ func (c *AssetMin) renderSpriteNoLock() string {
 	return spriteMergeAll(ordered...).String()
 }
 
-func (c *AssetMin) renderSprite() string {
+func (c *Compiler) renderSprite() string {
 	c.spriteMu.RLock()
 	defer c.spriteMu.RUnlock()
 	return c.renderSpriteNoLock()
 }
 
-func (c *AssetMin) setModuleSprite(name string, icons *sprite.Sprite) {
+func (c *Compiler) setModuleSprite(name string, icons *sprite.Sprite) {
 	c.spriteMu.Lock()
 	defer c.spriteMu.Unlock()
 	if icons == nil {
@@ -59,7 +59,7 @@ func (c *AssetMin) setModuleSprite(name string, icons *sprite.Sprite) {
 // addIcon adds an icon body with its explicit viewBox (the InjectSpriteIcon path).
 // viewBox is required: a symbol rendered in a box it was not drawn for is clipped
 // or misaligned, and no default can recover the source coordinate system.
-func (c *AssetMin) addIcon(id, content, viewBox string) error {
+func (c *Compiler) addIcon(id, content, viewBox string) error {
 	c.spriteMu.Lock()
 	defer c.spriteMu.Unlock()
 
@@ -86,7 +86,7 @@ func (c *AssetMin) addIcon(id, content, viewBox string) error {
 
 // addIconFile adds a whole .svg file as an icon. Reading the file's viewBox and
 // stripping its root element is sprite's job — assetmin does not parse SVG.
-func (c *AssetMin) addIconFile(id, content string) error {
+func (c *Compiler) addIconFile(id, content string) error {
 	c.spriteMu.Lock()
 	defer c.spriteMu.Unlock()
 
@@ -110,7 +110,7 @@ func (c *AssetMin) addIconFile(id, content string) error {
 	return nil
 }
 
-func (c *AssetMin) checkIconID(id string) error {
+func (c *Compiler) checkIconID(id string) error {
 	for _, s := range c.moduleSprites {
 		if spriteHas(s, id) {
 			return fmt.Err("icon ID already registered:", id)

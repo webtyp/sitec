@@ -16,7 +16,7 @@ import (
 // CLI) uses in dev mode:
 //
 //	extractor := sitec.New(root)
-//	am := sitec.NewAssetMin(cfg)
+//	am := sitec.NewCompiler(cfg)
 //	am.SetSSRExtractor(extractor)
 //	am.LoadSSRModules()              // initial async load at startup
 //	... file watcher fires ...
@@ -26,10 +26,10 @@ import (
 // rendered styles are wrong (old rules win) until the whole consumer app is
 // restarted.
 
-func newConsumerStack(t *testing.T, root string) *sitec.AssetMin {
+func newConsumerStack(t *testing.T, root string) *sitec.Compiler {
 	t.Helper()
 	extractor := newSeededExtractor(root)
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: filepath.Join(t.TempDir(), "public"),
 		RootDir:   root,
 	})
@@ -38,7 +38,7 @@ func newConsumerStack(t *testing.T, root string) *sitec.AssetMin {
 	return am
 }
 
-func cssBody(t *testing.T, am *sitec.AssetMin) string {
+func cssBody(t *testing.T, am *sitec.Compiler) string {
 	t.Helper()
 	css, err := am.GetMinifiedCSS()
 	if err != nil {

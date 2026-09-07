@@ -28,7 +28,7 @@ func TestPublishImagesHaceServibleUnaImagen(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 	am.SetFS(sitec.NewMemFS())
 
 	ip := &stubImageProcessor{
@@ -91,7 +91,7 @@ func TestPublishImagesNoEscribeEnDisco(t *testing.T) {
 
 	outputDir := t.TempDir()
 	ac := &sitec.Config{OutputDir: outputDir}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 	am.SetFS(sitec.NewOsFS())
 
 	ip := &stubImageProcessor{

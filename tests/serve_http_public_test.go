@@ -18,7 +18,7 @@ func TestAssetRoutesArePublic(t *testing.T) {
 	setup := newTestSetup(t)
 	defer setup.cleanup()
 
-	am := sitec.NewAssetMin(setup.ac)
+	am := sitec.NewCompiler(setup.ac)
 
 	if err := am.NewFileEvent("test.js", ".js", setup.createTempFile("test.js", "var a=1;"), "create"); err != nil {
 		t.Fatalf("js event: %v", err)

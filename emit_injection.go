@@ -8,11 +8,11 @@ package sitec
 // AddCSS appends CSS content from providers to the bundle
 // InjectCSS appends CSS content to the bundle.
 // name is used for the virtual filename (e.g., "mycomponent.css").
-func (c *AssetMin) InjectCSS(name string, content string) {
+func (c *Compiler) InjectCSS(name string, content string) {
 	if content == "" {
 		return
 	}
-	// AssetMin lock not strictly needed for accessing pre-initialized handlers,
+	// Compiler lock not strictly needed for accessing pre-initialized handlers,
 	// but kept for consistency if handlers were dynamic (they aren't currently).
 	// However, to avoid lock contention and potential deadlocks if handlers call back,
 	// we rely on the asset's own lock.
@@ -25,7 +25,7 @@ func (c *AssetMin) InjectCSS(name string, content string) {
 // AddJS appends JS content from providers to the bundle
 // InjectJS appends JS content to the bundle.
 // name is used for the virtual filename (e.g., "mycomponent.js").
-func (c *AssetMin) InjectJS(name string, content string) {
+func (c *Compiler) InjectJS(name string, content string) {
 	if content == "" {
 		return
 	}
@@ -37,13 +37,13 @@ func (c *AssetMin) InjectJS(name string, content string) {
 // id: unique icon ID.
 // svg: raw SVG content (the symbol body, e.g. `<path d="..."/>`).
 // viewBox: the coordinate system the content was drawn in, e.g. "0 0 24 24".
-func (c *AssetMin) InjectSpriteIcon(id, svg, viewBox string) error {
+func (c *Compiler) InjectSpriteIcon(id, svg, viewBox string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.addIcon(id, svg, viewBox)
 }
 
 // InjectHTML appends HTML to the body
-func (c *AssetMin) InjectHTML(html string) {
+func (c *Compiler) InjectHTML(html string) {
 	c.indexHtmlHandler.AddContentMiddle("injected.html", []byte(html))
 }

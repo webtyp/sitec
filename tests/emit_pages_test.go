@@ -45,7 +45,7 @@ func TestEmitPages_MultiPageEmission(t *testing.T) {
 		OutputDir: "web/public",
 		SiteURL:   "https://clinic.example.com",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	provider := &multiPageProvider{}
 	assets := &sitec.Assets{
@@ -108,7 +108,7 @@ func TestEmitPages_Collision_RenderHTML_and_RenderPages(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: "web/public",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	htmlAsset := &sitec.Assets{
 		ModuleName: "example.com/modA",
@@ -140,7 +140,7 @@ func TestEmitPages_Collision_DuplicatePages(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: "web/public",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	pageAsset1 := &sitec.Assets{
 		ModuleName: "example.com/mod1",
@@ -176,7 +176,7 @@ func TestEmitPages_RenderHTML_Only_Regression(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: "web/public",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	htmlAsset := &sitec.Assets{
 		ModuleName: "example.com/legacy",
@@ -203,7 +203,7 @@ func TestEmitPages_RenderHTML_Only_RelativeAssetPaths(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: "web/public",
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	htmlAsset := &sitec.Assets{
 		ModuleName: "example.com/app",

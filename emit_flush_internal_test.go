@@ -13,7 +13,7 @@ import (
 // This file lives at the module root, not under tests/, DELIBERATELY: every
 // other *_test.go in this repo is package sitec_test (black-box) under
 // tests/, but this one is white-box (package sitec) because it needs
-// AssetMin's unexported fields (mu, allAssets) and the unexported asset
+// Compiler's unexported fields (mu, allAssets) and the unexported asset
 // struct. This is the one intentional exception to the tests/ convention in
 // this repo; do not "fix" it by moving it there — package sitec inside
 // tests/ would be a different, disconnected package with no access to these
@@ -30,7 +30,7 @@ func TestFlushToDisk_PropagatesRegenerateCacheError(t *testing.T) {
 	const boomMediatype = "text/x-flush-test-error"
 	boom := errors.New("boom: minifier rejected this asset")
 
-	am := NewAssetMin(&Config{OutputDir: t.TempDir()})
+	am := NewCompiler(&Config{OutputDir: t.TempDir()})
 	am.min.AddFunc(boomMediatype, func(_ *minify.M, _ io.Writer, _ io.Reader, _ map[string]string) error {
 		return boom
 	})
@@ -57,8 +57,8 @@ func TestFlushToDisk_PropagatesRegenerateCacheError(t *testing.T) {
 }
 
 func TestDiskMirrored_FalseBeforeFlush(t *testing.T) {
-	am := NewAssetMin(&Config{OutputDir: t.TempDir()})
+	am := NewCompiler(&Config{OutputDir: t.TempDir()})
 	if am.DiskMirrored() {
-		t.Error("a fresh AssetMin must not report DiskMirrored before any FlushToDisk call")
+		t.Error("a fresh Compiler must not report DiskMirrored before any FlushToDisk call")
 	}
 }

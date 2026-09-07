@@ -11,7 +11,7 @@ import (
 	"webtyp.com/sitec"
 )
 
-// AssetMin.Write registers a pre-built artifact (e.g. a compiled WASM binary)
+// Compiler.Write registers a pre-built artifact (e.g. a compiled WASM binary)
 // for the sink. Before this test, Write() routed the content through the same
 // ContentFile-assembly + minifier pipeline used for CSS/JS/HTML fragments:
 //   - WriteContent appends "\n" after every fragment, corrupting a binary.
@@ -25,9 +25,9 @@ import (
 // This test writes binary content indistinguishable from a real .wasm module
 // (arbitrary bytes, including a trailing null byte a "\n"-joiner would not
 // preserve as-is) and asserts it survives Write + FlushToDisk unmodified.
-func TestAssetMin_WriteBinaryContentSurvivesFlush(t *testing.T) {
+func TestCompiler_WriteBinaryContentSurvivesFlush(t *testing.T) {
 	outDir := t.TempDir()
-	am := sitec.NewAssetMin(&sitec.Config{OutputDir: outDir, RootDir: outDir})
+	am := sitec.NewCompiler(&sitec.Config{OutputDir: outDir, RootDir: outDir})
 	am.SetFS(sitec.NewOsFS())
 
 	content := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0xff, 0x00}
@@ -51,8 +51,8 @@ func TestAssetMin_WriteBinaryContentSurvivesFlush(t *testing.T) {
 // The written artifact must appear in List() with a proper URL path, so the
 // CLI manifest and the dev-mode `serve` package (which enumerates fs.List())
 // both see it.
-func TestAssetMin_WriteRegistersArtifactInList(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{OutputDir: t.TempDir()})
+func TestCompiler_WriteRegistersArtifactInList(t *testing.T) {
+	am := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir()})
 	am.SetFS(sitec.NewMemFS())
 
 	if err := am.Write("client.wasm", []byte{0x00, 0x61, 0x73, 0x6d}, "application/wasm"); err != nil {

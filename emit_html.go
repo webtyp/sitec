@@ -28,10 +28,10 @@ func NewHtmlHandler(ac *Config, outputName, cssURL, jsURL, faviconURL string) *a
 		jsURL:  jsURL,
 	}
 	// faviconURL is kept for backwards compatibility but ignored; favicon links are now
-	// emitted dynamically via AssetMin.updateHtmlFaviconLinks based on derived files.
+	// emitted dynamically via Compiler.updateHtmlFaviconLinks based on derived files.
 	_ = faviconURL
 	//  default marcador de inicio index HTML — initially without favicon links;
-	//  AssetMin.updateHtmlFaviconLinks will rewrite this after favicon derivation.
+	//  Compiler.updateHtmlFaviconLinks will rewrite this after favicon derivation.
 	af.contentOpen = append(af.contentOpen, &ContentFile{
 		Path: "index-open.html",
 		Content: []byte(`<!doctype html>

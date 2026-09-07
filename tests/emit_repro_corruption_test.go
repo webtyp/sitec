@@ -23,7 +23,7 @@ func TestReproCorruption(t *testing.T) {
 		AssetsURLPrefix: "/assets",
 		DevMode:         true, // Disable cache for more frequent regeneration
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	const iterations = 100
 	var wg sync.WaitGroup

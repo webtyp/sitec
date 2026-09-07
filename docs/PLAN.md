@@ -2,8 +2,9 @@
 PLAN: "feat!: rename AssetMin to Compiler; read declared routes; check path collisions"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 14523475300251716881
+PR: https://github.com/webtyp/sitec/pull/21
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.

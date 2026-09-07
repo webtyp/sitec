@@ -34,7 +34,7 @@ import (
 // (diskMirrored=true), y los de Read no combinan "sin páginas" +
 // "servido desde memoria" + clave absoluta.
 func TestCaso1_ReadSirveGlueYCssRelativizadosDesdeMemoria(t *testing.T) {
-	am := NewAssetMin(&Config{OutputDir: t.TempDir()})
+	am := NewCompiler(&Config{OutputDir: t.TempDir()})
 	am.SetFS(NewMemFS()) // modo memoria: diskMirrored permanece false
 
 	// El demonio registra el bootstrap del WASM así (section-build.go).

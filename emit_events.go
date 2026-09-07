@@ -9,7 +9,7 @@ import (
 	"webtyp.com/js"
 )
 
-func (c *AssetMin) UpdateFileContentInMemory(filePath, extension, event string, content []byte) (*asset, error) {
+func (c *Compiler) UpdateFileContentInMemory(filePath, extension, event string, content []byte) (*asset, error) {
 	file := &ContentFile{
 		Path:    filePath,
 		Content: content,
@@ -46,7 +46,7 @@ func (c *AssetMin) UpdateFileContentInMemory(filePath, extension, event string, 
 	return nil, errors.New("UpdateFileContentInMemory extension: " + extension + " not found " + filePath)
 }
 
-func (c *AssetMin) isOutputPath(filePath string) bool {
+func (c *Compiler) isOutputPath(filePath string) bool {
 	normalizedFilePath := filepath.Clean(filePath)
 	cssOutputPath := filepath.Clean(c.mainStyleCssHandler.outputPath)
 	jsOutputPath := filepath.Clean(c.mainJsHandler.outputPath)
@@ -76,7 +76,7 @@ func (c *AssetMin) isOutputPath(filePath string) bool {
 		normalizedFilePathLower == htmlHandlerOutputPathLower
 }
 
-func (c *AssetMin) NewFileEvent(fileName, extension, filePath, event string) error {
+func (c *Compiler) NewFileEvent(fileName, extension, filePath, event string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -139,11 +139,11 @@ func (c *AssetMin) NewFileEvent(fileName, extension, filePath, event string) err
 	return c.processAsset(fh)
 }
 
-func fhForUnlocks(c *AssetMin, fh *asset) *asset {
+func fhForUnlocks(c *Compiler, fh *asset) *asset {
 	return fh
 }
 
-func (c *AssetMin) processAsset(fh *asset) error {
+func (c *Compiler) processAsset(fh *asset) error {
 	// 1. Always regenerate cache
 	if err := fh.RegenerateCache(c.activeMinifier()); err != nil {
 		return err
@@ -156,7 +156,7 @@ func (c *AssetMin) processAsset(fh *asset) error {
 	return nil
 }
 
-func (c *AssetMin) UnobservedFiles() []string {
+func (c *Compiler) UnobservedFiles() []string {
 	// Only truly generated/merged files should be unobserved.
 	// index.html and favicon.svg are often user-editable.
 	out := []string{
@@ -171,7 +171,7 @@ func (c *AssetMin) UnobservedFiles() []string {
 	return out
 }
 
-func (c *AssetMin) startCodeJS() (out string, err error) {
+func (c *Compiler) startCodeJS() (out string, err error) {
 	c.wasmMu.Lock()
 	runtime := c.wasmRuntime
 	filename := c.wasmFilename

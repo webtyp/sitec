@@ -12,7 +12,7 @@ import (
 // copyDeclaredFonts copies the four faces of d from RootDir/<Dir()> into OutputDir.
 // Skips a face when the destination exists and is not older than the source.
 // A missing source face is an error that names the file.
-func (c *AssetMin) copyDeclaredFonts(d font.Declaration) error {
+func (c *Compiler) copyDeclaredFonts(d font.Declaration) error {
 	if d.Family() == "" {
 		return nil
 	}
@@ -57,7 +57,7 @@ func copyFileIfStale(src, dst string) error {
 }
 
 // fontOutputPaths returns the four destination paths for the current root fonts, or nil.
-func (c *AssetMin) fontOutputPaths() []string {
+func (c *Compiler) fontOutputPaths() []string {
 	c.fontsMu.RLock()
 	d := c.fonts
 	c.fontsMu.RUnlock()
@@ -71,7 +71,7 @@ func (c *AssetMin) fontOutputPaths() []string {
 	return out
 }
 
-func (c *AssetMin) setFonts(d font.Declaration) {
+func (c *Compiler) setFonts(d font.Declaration) {
 	c.fontsMu.Lock()
 	c.fonts = d
 	c.fontsMu.Unlock()

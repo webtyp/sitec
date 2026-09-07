@@ -10,10 +10,10 @@ import (
 	"testing"
 )
 
-// TestSSRModeDelegation validates AssetMin behavior in SSR (Server-Side Rendering) mode.
+// TestSSRModeDelegation validates Compiler behavior in SSR (Server-Side Rendering) mode.
 //
 // SSR Mode is activated when the project's go.mod contains a dependency on sitec.
-// In this mode, AssetMin delegates all asset compilation to an external handler
+// In this mode, Compiler delegates all asset compilation to an external handler
 // instead of processing internally.
 //
 // Expected behavior:
@@ -31,7 +31,7 @@ func TestSSRModeDelegation(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: filepath.Join(tmpDir, "dist"),
 	}
-	am := sitec.NewAssetMin(ac)
+	am := sitec.NewCompiler(ac)
 
 	ssrCompileCalled := false
 
@@ -99,7 +99,7 @@ func TestSSRModeDelegation(t *testing.T) {
 		ac := &sitec.Config{
 			OutputDir: outputDir,
 		}
-		am := sitec.NewAssetMin(ac)
+		am := sitec.NewCompiler(ac)
 
 		// Create a "pre-existing" file in output dir
 		err := os.MkdirAll(outputDir, 0755)

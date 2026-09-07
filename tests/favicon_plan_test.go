@@ -116,7 +116,7 @@ func TestFaviconProducerIsRecognized(t *testing.T) {
 }
 
 func TestFaviconOnlyRootModule(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{RootDir: "/tmp/fake-root"})
+	am := sitec.NewCompiler(&sitec.Config{RootDir: "/tmp/fake-root"})
 	am.SetLog(func(...any) {})
 	raster := pngBytesHelper(t, 256, 256)
 	err := am.RouteExtractedAssets([]*sitec.Assets{

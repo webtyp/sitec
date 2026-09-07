@@ -3,9 +3,11 @@ package sitec
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"webtyp.com/fmt"
 	"webtyp.com/image/min"
+	"webtyp.com/router/routescan"
 )
 
 const (
@@ -61,31 +63,115 @@ type BuildConfig struct {
 	Log            func(...any)
 }
 
+// ErrRouteCollides is returned when a declared route has the same path as a
+// produced static artifact. The artifact is served first, so the route would be
+// unreachable with no error anywhere.
+const ErrRouteCollides = "route %s %s (routes/routes.go:%d) collides with the static asset %s — the asset is served first and the route would never run"
+
+const symbolParamStart = "{"
+
+func normalizePath(p string) string {
+	if p == "" {
+		return "/"
+	}
+	if !strings.HasPrefix(p, "/") {
+		p = "/" + p
+	}
+	if len(p) > 1 && strings.HasSuffix(p, "/") {
+		p = strings.TrimSuffix(p, "/")
+	}
+	return p
+}
+
+func splitPath(p string) []string {
+	norm := normalizePath(p)
+	if norm == "/" {
+		return []string{}
+	}
+	return strings.Split(norm[1:], "/")
+}
+
+func routeMatchesArtifact(routeSegs, artSegs []string) bool {
+	if len(routeSegs) != len(artSegs) {
+		return false
+	}
+	for i := 0; i < len(routeSegs); i++ {
+		r := routeSegs[i]
+		a := artSegs[i]
+		if strings.HasPrefix(r, symbolParamStart) {
+			continue
+		}
+		if r != a {
+			return false
+		}
+	}
+	return true
+}
+
+func checkRouteCollisions(routes []routescan.Decl, artifacts []Artifact) error {
+	if len(routes) == 0 || len(artifacts) == 0 {
+		return nil
+	}
+
+	type parsedArtifact struct {
+		origPath string
+		segments []string
+	}
+
+	parsedArts := make([]parsedArtifact, 0, len(artifacts))
+	for _, art := range artifacts {
+		parsedArts = append(parsedArts, parsedArtifact{
+			origPath: art.Path,
+			segments: splitPath(art.Path),
+		})
+	}
+
+	for _, decl := range routes {
+		routeSegs := splitPath(decl.Path)
+		for _, art := range parsedArts {
+			if routeMatchesArtifact(routeSegs, art.segments) {
+				return fmt.Err(fmt.Sprintf(ErrRouteCollides, decl.Method, decl.Path, decl.Line, art.origPath))
+			}
+		}
+	}
+	return nil
+}
+
 // Output es el resultado de un Build COMPLETO: los artefactos producidos,
 // listos para volcarse a un FS (WriteTo) o servirse desde Artifacts().
 type Output struct {
-	am *AssetMin
+	c      *Compiler
+	routes []routescan.Decl
+}
+
+// Routes returns the routes the project declared in routes/routes.go, in
+// source order. Empty when the project declares none.
+func (s *Output) Routes() []routescan.Decl {
+	if s == nil {
+		return nil
+	}
+	return s.routes
 }
 
 // Artifacts returns all produced artifacts.
 func (s *Output) Artifacts() []Artifact {
-	if s == nil || s.am == nil {
+	if s == nil || s.c == nil {
 		return nil
 	}
-	return s.am.List()
+	return s.c.List()
 }
 
 // An artifact's Path is a URL ("/style.css", "/", "/acerca/") — the URL is
 // the identity. diskPath resolves it to a real file under OutputDir
 // ("web/public/especialidades/oftalmologia/index.html"). Formula shared with
-// AssetMin.artifactDiskPath (emit_flush.go).
+// Compiler.artifactDiskPath (emit_flush.go).
 func (s *Output) diskPath(art Artifact) string {
-	return s.am.artifactDiskPath(art.Path)
+	return s.c.artifactDiskPath(art.Path)
 }
 
 // WriteTo writes the built site artifacts to the given FS.
 func (s *Output) WriteTo(fs FS) error {
-	if s == nil || s.am == nil {
+	if s == nil || s.c == nil {
 		return fmt.Err("sitec: WriteTo called on nil Output")
 	}
 	for _, art := range s.Artifacts() {
@@ -143,7 +229,7 @@ func Build(cfg BuildConfig) (*Output, error) {
 		imgQuality = DefaultImageQuality
 	}
 
-	am := NewAssetMin(&Config{
+	c := NewCompiler(&Config{
 		OutputDir: outDir,
 		RootDir:   root,
 		AppName:   cfg.AppName,
@@ -151,9 +237,9 @@ func Build(cfg BuildConfig) (*Output, error) {
 		DevMode:   cfg.Mode == ModeDev,
 	})
 	if cfg.Log != nil {
-		am.SetLog(cfg.Log)
+		c.SetLog(cfg.Log)
 	}
-	am.SetFS(NewMemFS())
+	c.SetFS(NewMemFS())
 
 	imgHandler := min.New(&min.Config{
 		RootDir:   root,
@@ -164,7 +250,7 @@ func Build(cfg BuildConfig) (*Output, error) {
 		imgHandler.SetLog(cfg.Log)
 	}
 	imgHandler.SetFinder(e.Finder())
-	am.SetImageProcessor(imgHandler)
+	c.SetImageProcessor(imgHandler)
 
 	wb := e.WasmBuilder()
 	if wb != nil {
@@ -172,13 +258,13 @@ func Build(cfg BuildConfig) (*Output, error) {
 		if err != nil {
 			return nil, err
 		}
-		am.SetWasm(wasmOut.Filename, wasmOut.Runtime)
-		if err := am.Write(wasmOut.Filename, wasmOut.Binary, "application/wasm"); err != nil {
+		c.SetWasm(wasmOut.Filename, wasmOut.Runtime)
+		if err := c.Write(wasmOut.Filename, wasmOut.Binary, "application/wasm"); err != nil {
 			return nil, err
 		}
 	}
 
-	if err := am.RouteExtractedAssets(all); err != nil {
+	if err := c.RouteExtractedAssets(all); err != nil {
 		return nil, err
 	}
 
@@ -186,33 +272,43 @@ func Build(cfg BuildConfig) (*Output, error) {
 		return nil, err
 	}
 
-	if err := am.PublishImages(); err != nil {
+	if err := c.PublishImages(); err != nil {
 		return nil, err
 	}
 
 	// Activos estáticos: los de RenderSite() (el proyecto manda) más los de
 	// BuildConfig, unidos sin duplicados en un solo recorrido.
 	var staticAssets []string
-	if am.site != nil {
-		staticAssets = append(staticAssets, am.site.StaticAssets...)
+	if c.site != nil {
+		staticAssets = append(staticAssets, c.site.StaticAssets...)
 	}
 	staticAssets = append(staticAssets, cfg.StaticAssets...)
 	staticAssets = dedupeStrings(staticAssets)
-	if err := copyStaticAssets(am, root, staticAssets); err != nil {
+	if err := copyStaticAssets(c, root, staticAssets); err != nil {
 		return nil, err
 	}
 
-	return &Output{am: am}, nil
+	routes, err := routescan.Scan(root)
+	if err != nil {
+		return nil, err
+	}
+
+	out := &Output{c: c, routes: routes}
+	if err := checkRouteCollisions(routes, out.Artifacts()); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }
 
 // LoadStaticAssets copia a la salida los activos declarados por RenderSite().
 // Separado de RouteExtractedAssets porque un activo estático no participa en
 // la cascada de CSS ni en el sprite: solo se copia.
 //
-// Es el camino que usa el demonio de desarrollo: AssetMin conoce el sitio del
+// Es el camino que usa el demonio de desarrollo: Compiler conoce el sitio del
 // raíz y puede copiar lo que declara sin pasar por Build(). Build() la usa
 // igualmente, unida a BuildConfig.StaticAssets y sin duplicados.
-func (c *AssetMin) LoadStaticAssets() error {
+func (c *Compiler) LoadStaticAssets() error {
 	c.mu.Lock()
 	site := c.site
 	rootDir := ""
@@ -267,10 +363,31 @@ func Check(rootDir string, log func(...any)) ([]string, error) {
 			modules = append(modules, a.ModuleName)
 		}
 	}
+
+	routes, err := routescan.Scan(root)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(routes) > 0 {
+		// Build an ephemeral Compiler output to obtain produced static artifacts
+		outDir := DefaultOutputDir
+		c := NewCompiler(&Config{
+			OutputDir: outDir,
+			RootDir:   root,
+		})
+		c.SetFS(NewMemFS())
+		if err := c.RouteExtractedAssets(all); err == nil {
+			if err := checkRouteCollisions(routes, c.List()); err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return modules, nil
 }
 
-func copyStaticAssets(am *AssetMin, rootDir string, staticAssets []string) error {
+func copyStaticAssets(c *Compiler, rootDir string, staticAssets []string) error {
 	for _, entry := range staticAssets {
 		srcPath := filepath.Join(rootDir, entry)
 		info, err := os.Stat(srcPath)
@@ -295,7 +412,7 @@ func copyStaticAssets(am *AssetMin, rootDir string, staticAssets []string) error
 					return err
 				}
 				mt := detectMediaType(p)
-				return am.Write(rel, content, mt)
+				return c.Write(rel, content, mt)
 			})
 			if err != nil {
 				return err
@@ -306,7 +423,7 @@ func copyStaticAssets(am *AssetMin, rootDir string, staticAssets []string) error
 				return err
 			}
 			mt := detectMediaType(srcPath)
-			if err := am.Write(entry, content, mt); err != nil {
+			if err := c.Write(entry, content, mt); err != nil {
 				return err
 			}
 		}

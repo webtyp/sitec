@@ -21,7 +21,7 @@ func (p *pageBodyComponent) String() string {
 // routeAssets routes one module's assets. Es la MITAD de compilacion.
 // Decide que modulo aporta el RootCSS, los slots de cascada y la copia de
 // fuentes: politica de como se ensambla la salida, no de cuando se reintenta.
-func (c *AssetMin) routeAssets(a *Assets, isRoot, isFramework bool) error {
+func (c *Compiler) routeAssets(a *Assets, isRoot, isFramework bool) error {
 	if isRoot {
 		c.fromRoot = nil
 	} else if isFramework {
@@ -94,7 +94,7 @@ func (c *AssetMin) routeAssets(a *Assets, isRoot, isFramework bool) error {
 // routeAssets meant the page owner — the root project, which sorts first —
 // was rendered before a single dependency had contributed, so the sprite went
 // out empty and every <use href="#…"> in the markup resolved to nothing.
-func (c *AssetMin) emitPages(a *Assets) error {
+func (c *Compiler) emitPages(a *Assets) error {
 	for _, p := range a.Pages {
 		outPath, urlPath := normalizePagePath(p.Path)
 		doc := p.Doc
@@ -146,7 +146,7 @@ func resolveAbsoluteURL(baseURL, relURL string) string {
 	return strings.TrimRight(baseURL, "/") + "/" + strings.TrimLeft(relURL, "/")
 }
 
-func (c *AssetMin) emitSitemapNoLock() {
+func (c *Compiler) emitSitemapNoLock() {
 	var urls []string
 	for _, a := range c.allAssets {
 		if a.mediatype == "text/html" {
@@ -195,7 +195,7 @@ func sortAndDedup(slice []string) []string {
 	return out
 }
 
-func (c *AssetMin) resolveAndApplyRootCSS() {
+func (c *Compiler) resolveAndApplyRootCSS() {
 	var entries []*ContentFile
 	if c.fromRoot != nil {
 		entries = append(entries, &ContentFile{Path: c.fromRoot.name, Content: []byte(c.fromRoot.css)})

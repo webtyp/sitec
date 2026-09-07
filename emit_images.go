@@ -18,7 +18,7 @@ import (
 // contenido sale idéntico porque el pipeline es determinista.
 //
 // Es idempotente: reescribe cada ruta con el contenido actual.
-func (c *AssetMin) PublishImages() error {
+func (c *Compiler) PublishImages() error {
 	c.mu.Lock()
 	ip := c.imageProcessor
 	c.mu.Unlock()

@@ -21,7 +21,7 @@ func TestCSSHotReload_NonSSRMode_KeyMismatchDuplicatesCSS(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: outDir,
 		RootDir:   tmpDir,
 	})
@@ -50,7 +50,7 @@ func TestCSSHotReload_SSRMode_UpdatesCorrectly(t *testing.T) {
 	initialCSS := ".btn { color: red; }"
 	updatedCSS := ".btn { color: blue; }"
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: outDir,
 		RootDir:   outDir,
 	})
@@ -78,7 +78,7 @@ func TestCSSHotReload_SSRMode_RefreshCalledOnReloadFailure(t *testing.T) {
 	outDir := t.TempDir()
 	moduleDir := t.TempDir()
 
-	am := sitec.NewAssetMin(&sitec.Config{
+	am := sitec.NewCompiler(&sitec.Config{
 		OutputDir: outDir,
 		RootDir:   t.TempDir(),
 	})

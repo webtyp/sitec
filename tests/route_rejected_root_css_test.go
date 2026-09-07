@@ -16,7 +16,7 @@ import (
 // checks the exit code, not stderr, so a misidentified root silently shipped
 // the framework's raw defaults instead of failing the pipeline.
 func TestRouteExtractedAssets_RejectsUnauthorizedRootCSS(t *testing.T) {
-	am := sitec.NewAssetMin(&sitec.Config{})
+	am := sitec.NewCompiler(&sitec.Config{})
 
 	err := am.RouteExtractedAssets([]*sitec.Assets{
 		{

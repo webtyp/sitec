@@ -144,7 +144,7 @@ func main() {}
 
 		// The contract a CI/CD build actually depends on: what gets served,
 		// through the same routing a real `sitec build`/app dev server uses.
-		am := sitec.NewAssetMin(&sitec.Config{OutputDir: t.TempDir()})
+		am := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir()})
 		am.SetSSRExtractor(e)
 		am.LoadSSRModules()
 		am.WaitForSSRLoad(10 * time.Second)
