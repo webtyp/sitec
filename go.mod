@@ -4,7 +4,7 @@ go 1.25.2
 
 require (
 	github.com/tdewolff/minify/v2 v2.24.8
-	webtyp.com/css v0.4.21
+	webtyp.com/css v0.4.22
 	webtyp.com/dom v0.13.12
 	webtyp.com/fmt v1.0.0
 	webtyp.com/font v0.0.5
