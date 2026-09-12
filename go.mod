@@ -13,7 +13,7 @@ require (
 	webtyp.com/js v0.0.10
 	webtyp.com/modfind v0.0.9
 	webtyp.com/router v0.1.35
-	webtyp.com/svg v0.3.9
+	webtyp.com/svg v0.3.11
 	webtyp.com/tinygo v1.0.1
 )
 
