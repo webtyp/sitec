@@ -26,5 +26,5 @@ require (
 	webtyp.com/context v0.0.23 // indirect
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/json v0.5.25 // indirect
-	webtyp.com/model v0.1.8 // indirect
+	webtyp.com/model v0.1.9 // indirect
 )
