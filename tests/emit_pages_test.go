@@ -104,7 +104,7 @@ func TestEmitPages_MultiPageEmission(t *testing.T) {
 	}
 }
 
-func TestEmitPages_Collision_RenderHTML_and_RenderPages(t *testing.T) {
+func TestEmitPages_Coexistence_RenderHTML_and_RenderPages(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: "web/public",
 	}
@@ -112,7 +112,7 @@ func TestEmitPages_Collision_RenderHTML_and_RenderPages(t *testing.T) {
 
 	htmlAsset := &sitec.Assets{
 		ModuleName: "example.com/modA",
-		HTML:       "<div>HTML Component</div>",
+		HTML:       "<div>App Shell</div>",
 	}
 	pageAsset := &sitec.Assets{
 		ModuleName: "example.com/modB",
@@ -126,13 +126,68 @@ func TestEmitPages_Collision_RenderHTML_and_RenderPages(t *testing.T) {
 	}
 
 	err := am.RouteExtractedAssets([]*sitec.Assets{htmlAsset, pageAsset})
+	if err != nil {
+		t.Fatalf("expected no error when RenderHTML and RenderPages coexist, got: %v", err)
+	}
+
+	// 1. Static page index.html at root
+	indexPath := "web/public/index.html"
+	indexBytes, _, ok := am.Read(indexPath)
+	if !ok {
+		t.Fatalf("expected %s to exist", indexPath)
+	}
+	indexStr := string(indexBytes)
+	if !strings.Contains(indexStr, "Home Page") {
+		t.Errorf("index.html missing home page content, got: %s", indexStr)
+	}
+	if strings.Contains(indexStr, "<script src=") {
+		t.Errorf("static page index.html must not contain bootstrap script tag, got: %s", indexStr)
+	}
+	if !strings.Contains(indexStr, `href="/style.css"`) && !strings.Contains(indexStr, `href='/style.css'`) {
+		t.Errorf("static page index.html must use absolute asset paths, got: %s", indexStr)
+	}
+
+	// 2. Shell app/index.html
+	appPath := "web/public/app/index.html"
+	appBytes, _, ok := am.Read(appPath)
+	if !ok {
+		t.Fatalf("expected %s to exist for app shell", appPath)
+	}
+	appStr := string(appBytes)
+	if !strings.Contains(appStr, "App Shell") {
+		t.Errorf("app/index.html missing shell content, got: %s", appStr)
+	}
+	if !strings.Contains(appStr, `<script src="/script.js"`) && !strings.Contains(appStr, `<script src='/script.js'`) {
+		t.Errorf("app shell app/index.html must contain bootstrap script tag, got: %s", appStr)
+	}
+	if !strings.Contains(appStr, `href="/style.css"`) && !strings.Contains(appStr, `href='/style.css'`) {
+		t.Errorf("app shell app/index.html must use absolute asset paths, got: %s", appStr)
+	}
+}
+
+func TestEmitPages_Collision_MultipleRenderHTML(t *testing.T) {
+	ac := &sitec.Config{
+		OutputDir: "web/public",
+	}
+	am := sitec.NewCompiler(ac)
+
+	htmlAsset1 := &sitec.Assets{
+		ModuleName: "example.com/modA",
+		HTML:       "<div>Shell A</div>",
+	}
+	htmlAsset2 := &sitec.Assets{
+		ModuleName: "example.com/modB",
+		HTML:       "<div>Shell B</div>",
+	}
+
+	err := am.RouteExtractedAssets([]*sitec.Assets{htmlAsset1, htmlAsset2})
 	if err == nil {
-		t.Fatalf("expected collision error when RenderHTML and RenderPages coincide on /, got nil")
+		t.Fatalf("expected collision error when multiple modules declare RenderHTML, got nil")
 	}
 
 	errStr := err.Error()
 	if !strings.Contains(errStr, "example.com/modA") || !strings.Contains(errStr, "example.com/modB") {
-		t.Errorf("expected collision error to name both conflicting modules, got: %v", err)
+		t.Errorf("expected collision error to name both modules, got: %v", err)
 	}
 }
 

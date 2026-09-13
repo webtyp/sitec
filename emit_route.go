@@ -101,9 +101,6 @@ func (c *Compiler) emitPages(a *Assets) error {
 		if doc.CSSURL == "" {
 			doc.CSSURL = c.mainStyleCssHandler.GetURLPath()
 		}
-		if doc.JSURL == "" {
-			doc.JSURL = c.mainJsHandler.GetURLPath()
-		}
 		if doc.FaviconURL == "" {
 			doc.FaviconURL = c.getFirstFaviconURL()
 		}
@@ -118,10 +115,6 @@ func (c *Compiler) emitPages(a *Assets) error {
 		pageAsset.urlPath = urlPath
 		pageAsset.UpdateContentInSlot("page", "write", &ContentFile{Path: "page", Content: []byte(rendered)}, "middle")
 		c.allAssets[pageAsset.outputPath] = pageAsset
-
-		if outPath == "index.html" {
-			c.indexHtmlHandler = pageAsset
-		}
 	}
 
 	return nil

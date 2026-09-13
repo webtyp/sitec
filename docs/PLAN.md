@@ -2,8 +2,9 @@
 PLAN: "feat: un proyecto puede tener páginas estáticas y shell a la vez; solo el shell carga wasm"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 16431016144738541591
+PR: https://github.com/webtyp/sitec/pull/22
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.

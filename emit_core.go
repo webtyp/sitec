@@ -24,6 +24,19 @@ import (
 	"webtyp.com/svg/sprite"
 )
 
+// ShellPath is where the WASM application shell is mounted when a project
+// ALSO declares static pages: the pages own "/", the shell lives here.
+//
+// It is a constant, not an option, and must stay that way. A framework exists
+// to remove decisions, not to offer them (see CONSTRUCTION_HARNESS.md): every
+// webtyp app puts its shell at the same place, so the size and the behaviour
+// of any of them can be reasoned about the same way. Making this configurable
+// would hand the decision back to each app and buy nothing.
+//
+// A project with no pages is unaffected: its shell stays at "/" with relative
+// asset paths, exactly as before — that is the case every existing app is in.
+const ShellPath = "/app/"
+
 // Diagnostics are built word by word through lang.Translate so each term can
 // be looked up in the dictionary (webtyp/fmt/lang). Identifiers, symbols and
 // runtime values are passed as single arguments: they are never translated.
@@ -345,6 +358,9 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 			continue
 		}
 		if a.HTML != "" {
+			if htmlModule != "" {
+				return fmt.Err("ssr: multiple modules declare RenderHTML():", htmlModule, "and", a.ModuleName)
+			}
 			htmlModule = a.ModuleName
 		}
 		for _, p := range a.Pages {
@@ -360,12 +376,19 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 	}
 
 	if htmlModule != "" {
-		if indexOwner, exists := pageOwners["index.html"]; exists {
-			if htmlModule == indexOwner {
-				return fmt.Err("ssr: page collision at /: module", htmlModule, "declares both RenderHTML and RenderPages with Path \"/\"")
-			}
-			return fmt.Err("ssr: page collision at /: RenderHTML in module", htmlModule, "conflicts with RenderPages in module", indexOwner)
+		if hasPages {
+			oldPath := c.indexHtmlHandler.outputPath
+			delete(c.allAssets, oldPath)
+			c.indexHtmlHandler.outputPath = filepath.Join(c.Config.OutputDir, "app", "index.html")
+			c.indexHtmlHandler.urlPath = ShellPath
+			c.allAssets[c.indexHtmlHandler.outputPath] = c.indexHtmlHandler
+		} else {
+			c.indexHtmlHandler.outputPath = filepath.Join(c.Config.OutputDir, "index.html")
+			c.indexHtmlHandler.urlPath = "/"
+			c.allAssets[c.indexHtmlHandler.outputPath] = c.indexHtmlHandler
 		}
+	} else if hasPages {
+		delete(c.allAssets, c.indexHtmlHandler.outputPath)
 	}
 
 	// 2. Route standard assets — every module, before any page is rendered.
