@@ -24,6 +24,17 @@ import (
 	"webtyp.com/svg/sprite"
 )
 
+// ShellPath is where the WASM application shell is mounted when a project
+// ALSO declares static pages: the pages own "/", the shell lives here.
+//
+// It is a constant, not an option, and must stay that way. A framework exists
+// to remove decisions, not to offer them (see CONSTRUCTION_HARNESS.md): every
+// webtyp app puts its shell at the same place, so the size and the behaviour
+// of any of them can be reasoned about the same way. Making this configurable
+// would hand the decision back to each app and buy nothing.
+//
+// A project with no pages is unaffected: its shell stays at "/" with relative
+// asset paths, exactly as before — that is the case every existing app is in.
 const ShellPath = "/app/"
 
 // Diagnostics are built word by word through lang.Translate so each term can
