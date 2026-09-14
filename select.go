@@ -109,6 +109,43 @@ func expandToSSRPackages(modules []module, scanner *scanner, assetLibraries []st
 	return out
 }
 
+// aliasFor returns a Go import alias for path, unique against every path
+// already recorded in used (a path -> alias map built incrementally as the
+// caller processes each module). It starts from the last path segment
+// (today's behavior) and, on collision with a DIFFERENT path, walks one more
+// segment toward the module root at a time until the alias is unique.
+//
+// A collision is only ever between two DIFFERENT full paths: the caller
+// dedupes on path before this is reached, so the same path is never
+// re-processed here.
+func aliasFor(path string, used map[string]string) string {
+	parts := strings.Split(path, "/")
+	depth := 1
+	replacer := strings.NewReplacer("-", "_", ".", "_")
+	for {
+		start := len(parts) - depth
+		if start < 0 {
+			start = 0
+		}
+		candidate := aliasPrefix + replacer.Replace(strings.Join(parts[start:], "_"))
+		if existingPath, ok := used[candidate]; !ok || existingPath == path {
+			return candidate
+		}
+		if start == 0 {
+			// Ran out of segments — both full paths, sanitized the same way,
+			// produce the same string. This can only happen if the two paths
+			// are identical once "-" is normalized to "_", which the caller's
+			// own path-level dedup already rules out. Returning candidate
+			// here (rather than panicking) keeps this function total; the
+			// caller's own bookkeeping still records the true path for both,
+			// so a second real collision surfaces as a Go compile error
+			// exactly as visible as today's bug, never a silent one.
+			return candidate
+		}
+		depth++
+	}
+}
+
 func modulesToAliases(modules []module, scanner *scanner, assetLibraries []string, rootDir string, lister GraphLister, log func(...any), verbose bool) ([]moduleAlias, error) {
 	var reachLog func(...any)
 	if verbose {
@@ -118,6 +155,7 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 
 	var skipped []string
 	var aliases []moduleAlias
+	aliasByCandidate := make(map[string]string)
 	for _, m := range expandToSSRPackages(modules, scanner, assetLibraries) {
 		// reach.partial: at least one build target's probe failed, so the
 		// reachable set is incomplete. Filtering on incomplete data risks
@@ -130,9 +168,8 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 			continue
 		}
 
-		parts := strings.Split(m.path, "/")
-		alias := strings.ReplaceAll(parts[len(parts)-1], "-", "_")
-		alias = aliasPrefix + alias
+		alias := aliasFor(m.path, aliasByCandidate)
+		aliasByCandidate[alias] = m.path
 
 		ma := moduleAlias{
 			Path:  m.path,
