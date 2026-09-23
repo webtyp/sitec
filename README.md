@@ -16,6 +16,26 @@ sitec check        # valida sin escribir nada (puerta de CI)
 
 stdout entrega datos (manifiesto JSON); stderr entrega logs.
 
+## Uso programático (Build de producción)
+
+Para compilar y emitir la superficie estática desplegable en un pipeline de producción sin depender del demonio de desarrollo:
+
+```go
+package main
+
+import "webtyp.com/sitec"
+
+func main() {
+	if err := sitec.Build(".", "web/public"); err != nil {
+		panic(err)
+	}
+}
+```
+
+`sitec.Build` ejecuta el pipeline completo en una sola pasada, borra el contenido previo de la salida y escribe el árbol servible a disco con minificación activada por defecto.
+
+> **Nota:** La compilación del binario Go WASM (`.wasm`) es responsabilidad del llamador (ej. invocando `go build` o `tinygo` para `GOOS=js GOARCH=wasm`). `Build` emite el runtime JS y enlaza el binario.
+
 ## Icono del sitio
 
 Un proyecto declara su icono con `Favicon()` en su paquete de configuración (`!wasm`):

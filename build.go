@@ -182,8 +182,95 @@ func (s *Output) WriteTo(fs FS) error {
 	return nil
 }
 
-// Build executes the entire build pipeline in memory. It does not write to the output disk.
-func Build(cfg BuildConfig) (*Output, error) {
+// Option configures the Build behavior.
+type Option func(*buildOptions)
+
+type buildOptions struct {
+	minify bool
+	log    func(...any)
+}
+
+// WithoutMinify disables minification for the build output.
+func WithoutMinify() Option {
+	return func(o *buildOptions) {
+		o.minify = false
+	}
+}
+
+// WithMinify explicitly sets whether minification is enabled.
+func WithMinify(enabled bool) Option {
+	return func(o *buildOptions) {
+		o.minify = enabled
+	}
+}
+
+// WithLog sets a custom logger for the build process.
+func WithLog(log func(...any)) Option {
+	return func(o *buildOptions) {
+		o.log = log
+	}
+}
+
+// Build compiles every asset of the project rooted at rootDir and writes the
+// servable tree to outDir. One pass, no watching, no server: this is the
+// entry point a release pipeline calls.
+//
+// Note: compiling the Go WASM binary (e.g. via go build or tinygo) is the caller's responsibility.
+func Build(rootDir, outDir string, opts ...Option) error {
+	if rootDir == "" {
+		return fmt.Err("sitec: RootDir is required")
+	}
+	if outDir == "" {
+		outDir = DefaultOutputDir
+	}
+
+	root, err := filepath.Abs(rootDir)
+	if err != nil {
+		return fmt.Err("sitec: error resolving RootDir:", err)
+	}
+
+	options := buildOptions{
+		minify: true,
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&options)
+		}
+	}
+
+	outPath := outDir
+	if !filepath.IsAbs(outPath) {
+		outPath = filepath.Join(root, outDir)
+	}
+
+	if err := os.RemoveAll(outPath); err != nil {
+		return fmt.Err("sitec: error cleaning output directory:", err)
+	}
+	if err := os.MkdirAll(outPath, 0755); err != nil {
+		return fmt.Err("sitec: error creating output directory:", err)
+	}
+
+	cfg := BuildConfig{
+		RootDir:   root,
+		OutputDir: outDir,
+		Mode:      ModeRelease,
+		Log:       options.log,
+	}
+
+	out, err := buildPipeline(cfg, options.minify)
+	if err != nil {
+		return err
+	}
+
+	return out.WriteTo(NewOsFS())
+}
+
+// BuildWithConfig executes the build pipeline with a custom BuildConfig and returns the Output in memory.
+func BuildWithConfig(cfg BuildConfig) (*Output, error) {
+	return buildPipeline(cfg, cfg.Mode != ModeDev)
+}
+
+func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 	if cfg.RootDir == "" {
 		return nil, fmt.Err("sitec: RootDir is required")
 	}
@@ -236,6 +323,7 @@ func Build(cfg BuildConfig) (*Output, error) {
 		SiteURL:   cfg.SiteURL,
 		DevMode:   cfg.Mode == ModeDev,
 	})
+	c.SetMinifyEnabled(minify)
 	if cfg.Log != nil {
 		c.SetLog(cfg.Log)
 	}

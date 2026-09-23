@@ -2,8 +2,9 @@
 PLAN: "feat: one-shot production build — sitec emits a deployable web/public without the dev daemon"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 15977738815553794890
+PR: https://github.com/webtyp/sitec/pull/24
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.

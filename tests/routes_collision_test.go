@@ -41,7 +41,7 @@ func TestRoutes_NoRoutesFile(t *testing.T) {
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
 
-	site, err := sitec.Build(sitec.BuildConfig{
+	site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir: root,
 		Mode:    sitec.ModeRelease,
 	})
@@ -69,7 +69,7 @@ func Routes(r router.Router) {
 }
 `)
 
-	site, err := sitec.Build(sitec.BuildConfig{
+	site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir: root,
 		Mode:    sitec.ModeRelease,
 	})
@@ -107,7 +107,7 @@ func Routes(r router.Router) {
 `)
 
 	outDir := filepath.Join(root, "out")
-	_, err := sitec.Build(sitec.BuildConfig{
+	_, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir:   root,
 		Mode:      sitec.ModeRelease,
 		OutputDir: outDir,
@@ -165,7 +165,7 @@ func Routes(r router.Router) {
 }
 `)
 
-	site, err := sitec.Build(sitec.BuildConfig{
+	site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir: root,
 		Mode:    sitec.ModeRelease,
 	})
@@ -191,7 +191,7 @@ func Routes(r router.Router) {
 }
 `)
 
-	site, err := sitec.Build(sitec.BuildConfig{
+	site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir: root,
 		Mode:    sitec.ModeRelease,
 	})
@@ -218,7 +218,7 @@ func Routes(r router.Router) {
 }
 `)
 
-	_, err := sitec.Build(sitec.BuildConfig{
+	_, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir: root,
 		Mode:    sitec.ModeRelease,
 	})

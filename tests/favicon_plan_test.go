@@ -100,7 +100,7 @@ func TestFaviconProducerIsRecognized(t *testing.T) {
 	appDir := t.TempDir()
 	raster := pngBytesHelper(t, 256, 256)
 	writeTempAppWithFaviconHelper(t, appDir, raster, nil)
-	out, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
+	out, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err != nil {
 		t.Fatalf("Build failed: %v", err)
 	}
@@ -206,7 +206,7 @@ func (w *Widget) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 	cmd2 := exec.Command("go", "mod", "tidy")
 	cmd2.Dir = libDir
 	cmd2.CombinedOutput()
-	_, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
+	_, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err == nil {
 		t.Fatalf("expected error when non-root declares Favicon(), got nil")
 	}
@@ -223,7 +223,7 @@ func TestFaviconEmitsFullSet(t *testing.T) {
 	raster := pngBytesHelper(t, 256, 256)
 	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>`)
 	writeTempAppWithFaviconHelper(t, appDir, raster, svg)
-	out, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
+	out, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -244,7 +244,7 @@ func TestFaviconLinksInHead(t *testing.T) {
 	raster := pngBytesHelper(t, 256, 256)
 	svg := []byte(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>`)
 	writeTempAppWithFaviconHelper(t, appDir, raster, svg)
-	out, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
+	out, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -287,7 +287,7 @@ func TestFaviconInvalidLogoFailsBuild(t *testing.T) {
 	appDir := t.TempDir()
 	raster := pngBytesHelper(t, 800, 600)
 	writeTempAppWithFaviconHelper(t, appDir, raster, nil)
-	_, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
+	_, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err == nil {
 		t.Fatalf("expected error for 800x600 logo, got nil")
 	}
@@ -330,7 +330,7 @@ func (p *P) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 	cmd := exec.Command("go", "mod", "tidy")
 	cmd.Dir = appDir
 	cmd.CombinedOutput()
-	out, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
+	out, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err != nil {
 		t.Fatalf("Build without favicon should not fail, got: %v", err)
 	}
@@ -391,7 +391,7 @@ func (p *P) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 	os.MkdirAll(filepath.Dir(faviconPath), 0755)
 	original := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="red"/></svg>`
 	os.WriteFile(faviconPath, []byte(original), 0644)
-	out, err := sitec.Build(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease, OutputDir: "web/public"})
+	out, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease, OutputDir: "web/public"})
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
