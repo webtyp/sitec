@@ -85,7 +85,7 @@ func (p *PageProducer) RenderSite() *sitec.Site {
 		t.Fatalf("go mod tidy failed: %v, output: %s", err, string(out))
 	}
 
-	out, err := sitec.Build(sitec.BuildConfig{
+	out, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir: appDir,
 		Mode:    sitec.ModeRelease,
 	})

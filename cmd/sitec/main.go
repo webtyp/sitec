@@ -75,7 +75,7 @@ func runBuild(args []string) {
 		os.Exit(1)
 	}
 
-	site, err := sitec.Build(sitec.BuildConfig{
+	site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir:   root,
 		Mode:      sitec.ModeRelease,
 		OutputDir: *outputDir,

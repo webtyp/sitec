@@ -140,7 +140,7 @@ func (p *PageProducer) RenderSite() *sitec.Site {
 			t.Fatalf("go mod tidy in appDir failed: %v, output: %s", err, string(out))
 		}
 
-		site, err := sitec.Build(sitec.BuildConfig{
+		site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 			RootDir: appDir,
 			Mode:    sitec.ModeRelease,
 		})
@@ -211,7 +211,7 @@ go 1.25.2
 			t.Fatal(err)
 		}
 
-		site, err := sitec.Build(sitec.BuildConfig{
+		site, err := sitec.BuildWithConfig(sitec.BuildConfig{
 			RootDir: dir,
 			Mode:    sitec.ModeRelease,
 		})
