@@ -2,6 +2,8 @@
 PLAN: "feat: one-shot production build — sitec emits a deployable web/public without the dev daemon"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 15977738815553794890
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
