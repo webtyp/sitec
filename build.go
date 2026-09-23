@@ -250,9 +250,18 @@ func Build(rootDir, outDir string, opts ...Option) error {
 		return fmt.Err("sitec: error creating output directory:", err)
 	}
 
+	// OutputDir carries outPath (already absolute), never the raw outDir:
+	// artifactDiskPath (emit_flush.go) resolves every artifact as
+	// filepath.Join(c.OutputDir, rel) — it never joins RootDir in. That is
+	// harmless for the daemon, which always runs with the CWD already at the
+	// project root, but Build is a one-shot entry point meant to be called
+	// from anywhere (a CI job, a release script) — a relative OutputDir here
+	// silently writes under the CALLER's CWD instead of under rootDir. Caught
+	// by TestOneShotBuild_ConsumerFixture asserting on the real path, not by
+	// inspecting Content in memory.
 	cfg := BuildConfig{
 		RootDir:   root,
-		OutputDir: outDir,
+		OutputDir: outPath,
 		Mode:      ModeRelease,
 		Log:       options.log,
 	}
