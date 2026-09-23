@@ -7,3 +7,6 @@ require (
 	webtyp.com/sitec v0.0.0
 	webtyp.com/svg v0.1.21
 )
+
+
+replace webtyp.com/sitec => ../..
