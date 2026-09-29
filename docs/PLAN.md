@@ -2,6 +2,8 @@
 PLAN: "fix: ExtractAll returns an empty result, not an error, when no module declares assets"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 10836106339168970717
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
