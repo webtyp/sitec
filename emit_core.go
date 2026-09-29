@@ -80,11 +80,6 @@ func msgFaviconNonRoot(moduleName string) string {
 		"Favicon();", "it", "is", "declared", "by", moduleName).String()
 }
 
-func msgNoAssetsExtracted() string {
-	return lang.Translate(msgPrefix, "no", "module", "produced", "assets;", "the", "stylesheet",
-		"would", "come", "out", "empty").String()
-}
-
 func msgEmptyExtraction() string {
 	return lang.Translate(msgPrefix, "empty", "extraction:", "no", "module", "contributed",
 		"assets").String()
@@ -207,6 +202,9 @@ func (c *Compiler) LoadSSRModules() {
 		if err != nil {
 			c.writeMessage("SSR extract error:", err)
 			return
+		}
+		if len(all) == 0 {
+			return // nothing declared yet; the next load retries
 		}
 		if err := c.RouteExtractedAssets(all); err != nil {
 			c.writeMessage("route assets error:", err)
