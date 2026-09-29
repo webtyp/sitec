@@ -2,8 +2,9 @@
 PLAN: "fix: ExtractAll returns an empty result, not an error, when no module declares assets"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 10836106339168970717
+PR: https://github.com/webtyp/sitec/pull/25
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
