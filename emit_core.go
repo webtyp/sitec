@@ -28,7 +28,7 @@ import (
 // ALSO declares static pages: the pages own "/", the shell lives here.
 //
 // It is a constant, not an option, and must stay that way. A framework exists
-// to remove decisions, not to offer them (see CONSTRUCTION_HARNESS.md): every
+// to remove decisions, not to offer them (see the api-design skill): every
 // webtyp app puts its shell at the same place, so the size and the behaviour
 // of any of them can be reasoned about the same way. Making this configurable
 // would hand the decision back to each app and buy nothing.
