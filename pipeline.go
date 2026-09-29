@@ -185,6 +185,9 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 	return a, nil
 }
 
+// ExtractAll extracts assets from all discovered modules. An empty result with
+// a nil error means no module declares assets; the caller decides whether that
+// is acceptable.
 func (e *Extractor) ExtractAll() ([]*Assets, error) {
 	modules, err := e.discoverModules(e.rootDir)
 	if err != nil {
@@ -235,9 +238,6 @@ func (e *Extractor) ExtractAll() ([]*Assets, error) {
 		}
 	}
 
-	if len(all) == 0 {
-		return nil, fmt.Err(msgNoAssetsExtracted())
-	}
 	return all, nil
 }
 

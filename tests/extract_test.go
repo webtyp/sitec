@@ -3,28 +3,29 @@ package sitec_test
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"webtyp.com/modfind"
 	"webtyp.com/sitec"
 )
 
-func TestExtractAll_Empty(t *testing.T) {
+// A project whose modules declare no assets is a normal state (a new or
+// minimal project): ExtractAll reports "nothing found", not a failure.
+func TestExtractAll_EmptyIsNotAnError(t *testing.T) {
 	root := t.TempDir()
 	os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/demo\ngo 1.24\n"), 0644)
 	e := sitec.New(root)
 	f := modfind.New()
 	f.Seed(root, []modfind.Module{{Path: "example.com/demo", Dir: root}})
 	e.SetFinder(f)
+
 	all, err := e.ExtractAll()
-	if err == nil {
-		t.Fatal("expected error on empty extraction")
+	if err != nil {
+		t.Fatalf("an empty extraction must not be an error, got: %v", err)
 	}
-	if !strings.Contains(err.Error(), "no module produced assets") {
-		t.Errorf("expected empty extraction error, got: %v", err)
+	if len(all) != 0 {
+		t.Errorf("expected no assets, got %d", len(all))
 	}
-	_ = all
 }
 
 func TestExtractModule_NoSSRFiles(t *testing.T) {
