@@ -7,6 +7,7 @@ import (
 
 	"webtyp.com/fmt"
 	"webtyp.com/js"
+	"webtyp.com/pwa"
 	"webtyp.com/tinygo"
 )
 
@@ -120,7 +121,7 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	}
 
 	if w.hashName {
-		wasmFilename = hashedName(wasmFilename, binary)
+		wasmFilename = pwa.HashedName(wasmFilename, binary)
 	}
 
 	// Paso 4: generar el runtime JS

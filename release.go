@@ -11,25 +11,10 @@ import (
 	"webtyp.com/pwa"
 )
 
-// hashLen is how many hex characters of the content's SHA-256 go into a file name.
-const hashLen = 8
-
 // contentHash is the hex SHA-256 of content, 16 characters: the revision of a shell asset.
 func contentHash(content []byte) string {
 	h := sha256.Sum256(content)
 	return hex.EncodeToString(h[:])[:16]
-}
-
-// hashedName inserts the first hashLen characters of contentHash before the extension:
-// hashedName("style.css", c) == "style.3f9a1c2b.css". A name without extension gets ".<hash>".
-func hashedName(name string, content []byte) string {
-	hash := contentHash(content)[:hashLen]
-	ext := path.Ext(name)
-	if ext != "" {
-		base := strings.TrimSuffix(name, ext)
-		return base + "." + hash + ext
-	}
-	return name + "." + hash
 }
 
 // releaseInput is what the final pass needs from the compiler.
@@ -115,7 +100,7 @@ func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 			if art.Path == old {
 				dir := path.Dir(old)
 				base := path.Base(old)
-				newName := hashedName(base, art.Content)
+				newName := pwa.HashedName(base, art.Content)
 				newURL := path.Join(dir, newName)
 				if !strings.HasPrefix(old, "/") {
 					newURL = strings.TrimPrefix(newURL, "./")
@@ -146,6 +131,10 @@ func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 		var shell []pwa.Asset
 		for _, art := range out {
 			if art.Path == pwa.ServiceWorkerPath {
+				continue
+			}
+			// Large artifacts are kept in OPFS by webtyp/artifacts, never precached.
+			if strings.HasPrefix(path.Join("/", art.Path)+"/", pwa.ArtifactsDir) {
 				continue
 			}
 			urlPath := art.Path

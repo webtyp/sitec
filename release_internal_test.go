@@ -10,23 +10,23 @@ import (
 
 func TestHashedName(t *testing.T) {
 	content1 := []byte("body { color: red; }")
-	name1 := hashedName("style.css", content1)
+	name1 := pwa.HashedName("style.css", content1)
 	if !strings.HasPrefix(name1, "style.") || !strings.HasSuffix(name1, ".css") {
 		t.Fatalf("unexpected name format: %s", name1)
 	}
 
-	name2 := hashedName("style.css", content1)
+	name2 := pwa.HashedName("style.css", content1)
 	if name1 != name2 {
 		t.Fatalf("expected identical hash for identical content: %s vs %s", name1, name2)
 	}
 
 	content2 := []byte("body { color: blue; }")
-	name3 := hashedName("style.css", content2)
+	name3 := pwa.HashedName("style.css", content2)
 	if name1 == name3 {
 		t.Fatalf("expected different hash for changed content: %s", name1)
 	}
 
-	licenseName := hashedName("LICENSE", content1)
+	licenseName := pwa.HashedName("LICENSE", content1)
 	if !strings.HasPrefix(licenseName, "LICENSE.") || strings.Contains(licenseName, ".css") {
 		t.Fatalf("unexpected extensionless hashed name: %s", licenseName)
 	}
@@ -204,7 +204,7 @@ func TestFinalizeRelease_PWAHashesFinalFiles(t *testing.T) {
 		}
 	}
 
-	expectedName := hashedName("script.js", jsArt.Content)
+	expectedName := pwa.HashedName("script.js", jsArt.Content)
 	if jsArt.Path != "/"+expectedName {
 		t.Fatalf("expected JS name to reflect content after register script append: got %s, expected /%s", jsArt.Path, expectedName)
 	}
@@ -295,4 +295,36 @@ func TestFinalizeRelease_HTMLWithoutHead(t *testing.T) {
 	if !strings.Contains(err.Error(), "/bad.html") {
 		t.Fatalf("expected error to name artifact /bad.html, got: %v", err)
 	}
+}
+
+// Large artifacts under pwa.ArtifactsDir live in OPFS (webtyp/artifacts): the service worker must
+// never precache hundreds of MB of model weights into Cache Storage.
+func TestFinalizeRelease_ArtifactsNeverPrecached(t *testing.T) {
+	arts := []Artifact{
+		{Path: "/", Mediatype: "text/html", Content: []byte(`<html><head></head><body><script src="/script.js"></script></body></html>`)},
+		{Path: "/script.js", Mediatype: "text/javascript", Content: []byte("1")},
+		{Path: "/artifacts.json", Mediatype: "application/json", Content: []byte("{}")},
+		{Path: pwa.ArtifactsDir + "decider-0.8b.q4.wtypw", Mediatype: "application/octet-stream", Content: []byte("weights")},
+	}
+	icons := []favicon.File{
+		{Name: "icon-192.png", Sizes: "192x192", Mediatype: "image/png"},
+		{Name: "icon-512.png", Sizes: "512x512", Mediatype: "image/png"},
+	}
+	cfg := pwa.Config{Name: "App", ThemeColor: "#000", BackgroundColor: "#fff"}
+	out, err := finalizeRelease(arts, releaseInput{JSURL: "/script.js", PWA: &cfg, Favicons: icons})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, a := range out {
+		if a.Path == pwa.ServiceWorkerPath {
+			if strings.Contains(string(a.Content), pwa.ArtifactsDir) {
+				t.Errorf("service worker precaches a large artifact:\n%s", a.Content)
+			}
+			if !strings.Contains(string(a.Content), "/artifacts.json") {
+				t.Error("the artifacts manifest itself is a small shell file and must be precached")
+			}
+			return
+		}
+	}
+	t.Fatal("no service worker emitted")
 }
