@@ -12,6 +12,7 @@ require (
 	webtyp.com/image v0.1.11
 	webtyp.com/js v0.1.0
 	webtyp.com/modfind v0.0.9
+	webtyp.com/pwa v0.1.1
 	webtyp.com/router v0.3.0
 	webtyp.com/svg v0.3.14
 	webtyp.com/tinygo v1.0.1
@@ -24,8 +25,6 @@ require (
 	golang.org/x/image v0.45.0 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
-	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/json v0.5.27 // indirect
 	webtyp.com/model v0.1.9 // indirect
-	webtyp.com/pwa v0.1.0 // indirect
 )
