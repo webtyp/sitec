@@ -84,7 +84,7 @@ replace webtyp.com/sitec => ` + repoRoot + "\n" + webtypReplaces(t)
 	}
 
 	// 2. Assert style.css exists and is non-empty
-	cssContent, err := os.ReadFile(filepath.Join(outDir, "style.css"))
+	cssContent, err := os.ReadFile(releaseHashed(t, outDir, "style", ".css"))
 	if err != nil {
 		t.Fatalf("expected style.css to be emitted: %v", err)
 	}
@@ -96,7 +96,7 @@ replace webtyp.com/sitec => ` + repoRoot + "\n" + webtypReplaces(t)
 	}
 
 	// 3. Assert icons.svg exists and is non-empty
-	svgContent, err := os.ReadFile(filepath.Join(outDir, "icons.svg"))
+	svgContent, err := os.ReadFile(releaseHashed(t, outDir, "icons", ".svg"))
 	if err != nil {
 		t.Fatalf("expected icons.svg to be emitted: %v", err)
 	}
@@ -167,11 +167,25 @@ replace webtyp.com/sitec => ` + repoRoot + "\n" + webtypReplaces(t)
 		t.Fatalf("sitec.Build failed: %v", err)
 	}
 
-	cssContent, err := os.ReadFile(filepath.Join(outDir, "style.css"))
+	cssContent, err := os.ReadFile(releaseHashed(t, outDir, "style", ".css"))
 	if err != nil {
 		t.Fatalf("expected style.css to be emitted: %v", err)
 	}
 	if !strings.Contains(string(cssContent), "margin: 0") {
 		t.Errorf("expected style.css to contain margin: 0, got: %s", string(cssContent))
 	}
+}
+
+// releaseHashed returns the path of the single content-hashed file <name>.<hash><ext> a release
+// build writes to outDir; a release build never writes the unhashed <name><ext>.
+func releaseHashed(t *testing.T, outDir, name, ext string) string {
+	t.Helper()
+	if _, err := os.Stat(filepath.Join(outDir, name+ext)); err == nil {
+		t.Errorf("release build wrote an unhashed %s%s", name, ext)
+	}
+	matches, err := filepath.Glob(filepath.Join(outDir, name+".*"+ext))
+	if err != nil || len(matches) != 1 {
+		t.Fatalf("expected exactly one %s.<hash>%s in %s, got %v (%v)", name, ext, outDir, matches, err)
+	}
+	return matches[0]
 }

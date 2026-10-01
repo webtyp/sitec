@@ -142,6 +142,7 @@ func checkRouteCollisions(routes []routescan.Decl, artifacts []Artifact) error {
 type Output struct {
 	c      *Compiler
 	routes []routescan.Decl
+	arts   []Artifact
 }
 
 // Routes returns the routes the project declared in routes/routes.go, in
@@ -155,7 +156,13 @@ func (s *Output) Routes() []routescan.Decl {
 
 // Artifacts returns all produced artifacts.
 func (s *Output) Artifacts() []Artifact {
-	if s == nil || s.c == nil {
+	if s == nil {
+		return nil
+	}
+	if s.arts != nil {
+		return s.arts
+	}
+	if s.c == nil {
 		return nil
 	}
 	return s.c.List()
@@ -391,6 +398,22 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 	}
 
 	out := &Output{c: c, routes: routes}
+
+	if cfg.Mode == ModeRelease {
+		arts, err := finalizeRelease(c.List(), releaseInput{
+			CSSURL:    c.mainStyleCssHandler.GetURLPath(),
+			JSURL:     c.mainJsHandler.GetURLPath(),
+			SpriteURL: c.spriteSvgHandler.GetURLPath(),
+			PWA:       c.pwa,
+			Favicons:  c.getFaviconFiles(),
+			Log:       c.log,
+		})
+		if err != nil {
+			return nil, err
+		}
+		out.arts = arts
+	}
+
 	if err := checkRouteCollisions(routes, out.Artifacts()); err != nil {
 		return nil, err
 	}

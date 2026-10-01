@@ -40,17 +40,21 @@ func (o WasmBuildOptions) filename() string {
 }
 
 type defaultWasmBuilder struct {
-	stdlib bool // if true, use standard Go compiler instead of TinyGo
-	opts   WasmBuildOptions
+	hashName bool // release site frontend only: name the binary by its content hash
+	stdlib   bool // if true, use standard Go compiler instead of TinyGo
+	opts     WasmBuildOptions
 }
 
 // NewDefaultWasmBuilder builds a site frontend from web/client.go.
-func NewDefaultWasmBuilder(stdlib bool) WasmBuilder {
-	return &defaultWasmBuilder{stdlib: stdlib}
+// In release (devMode false) the binary is named by its content hash (client.<hash>.wasm) and
+// the page bootstrap loads that name.
+func NewDefaultWasmBuilder(devMode bool) WasmBuilder {
+	return &defaultWasmBuilder{hashName: !devMode, stdlib: devMode}
 }
 
 // NewWasmBuilder builds an arbitrary entry point, for callers that are not
-// compiling a site frontend.
+// compiling a site frontend. The output keeps its fixed name (e.g. an edge Worker binary that a
+// deploy config references by name): only the page binary is content-hashed.
 func NewWasmBuilder(stdlib bool, opts WasmBuildOptions) WasmBuilder {
 	return &defaultWasmBuilder{stdlib: stdlib, opts: opts}
 }
@@ -115,13 +119,17 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 		return WasmOutput{}, err
 	}
 
+	if w.hashName {
+		wasmFilename = hashedName(wasmFilename, binary)
+	}
+
 	// Paso 4: generar el runtime JS
 	if !w.stdlib {
 		js.SetRuntime(js.RuntimeTinyGo)
 	} else {
 		js.SetRuntime(js.RuntimeGo)
 	}
-	runtimeJS := js.PageBootstrap(js.DefaultWasmURL).Content
+	runtimeJS := js.PageBootstrap("/" + wasmFilename).Content
 
 	return WasmOutput{
 		Binary:   binary,

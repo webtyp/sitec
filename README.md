@@ -53,6 +53,27 @@ func (b *Brand) Favicon() favicon.Source {
 
 `sitec` **no sanea** el SVG que reciba: un SVG de un tercero se limpia antes con `webtyp.com/svg/sanitize`. El de un proyecto es suyo y es de confianza.
 
+## Aplicación Web Progresiva (PWA)
+
+Un proyecto se convierte en PWA declarando `Favicon()` (con un logo de al menos 512 px) y `PWA()` en su paquete raíz (`!wasm`):
+
+```go
+func (a *App) Favicon() favicon.Source {
+    return favicon.Source{Raster: logo} // logo >= 512x512
+}
+
+func (a *App) PWA() pwa.Config {
+    return pwa.Config{
+        Name:            "Mi Aplicación",
+        ShortName:       "App",
+        ThemeColor:      "#0080ff",
+        BackgroundColor: "#ffffff",
+    }
+}
+```
+
+En builds de producción (`ModeRelease`), `sitec` emite automáticamente `manifest.webmanifest`, inyecta los tags `<head>` y el script de registro del service worker, renombra los activos con su hash de contenido (`style.3f9a1c2b.css`) y genera `sw.js` con el manifiesto de precaché completo. En desarrollo (`ModeDev`), mantiene nombres fijos sin service worker.
+
 ## Estado
 
 En construcción.

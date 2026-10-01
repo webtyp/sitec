@@ -49,6 +49,7 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 	var fontsFrom string
 	var siteFrom string
 	var faviconFrom string
+	var pwaFrom string
 
 	for _, p := range paths {
 		out := results[p]
@@ -89,6 +90,14 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 			}
 			merged.Favicon = out.Favicon
 			faviconFrom = p
+		}
+		if out.PWA != nil {
+			if pwaFrom != "" {
+				return CollectorOutput{}, false, fmt.Err("ssr: multiple PWA() declarations:",
+					pwaFrom, "and", p, "— only one package per module may declare PWA()")
+			}
+			merged.PWA = out.PWA
+			pwaFrom = p
 		}
 	}
 

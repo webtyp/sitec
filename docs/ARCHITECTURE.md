@@ -136,6 +136,56 @@ extractor find it, or fail the build naming the package. Never skip quietly.
 
 ---
 
+## 7. Release names and PWA
+
+In release builds (`ModeRelease`), `sitec` executes a pure finalization pass (`finalizeRelease`) over all produced artifacts:
+
+1. **PWA head and register script injection** (when `PWA()` is declared):
+   - Reads `PWA()` config from the root module and install icons from `Favicon()`.
+   - Injects `<link rel="manifest">` and PWA meta tags into all HTML artifacts (`app.HeadTags` before `</head>`).
+   - Appends `app.RegisterScript` to the main JS script artifact.
+   - Generates `manifest.webmanifest`.
+2. **Content hashing and reference rewriting**:
+   - Computes SHA-256 content hashes for the main CSS, JS, and SVG sprite artifacts.
+   - Renames them to content-hashed paths (e.g., `style.3f9a1c2b.css`).
+   - Rewrites all quoted references inside HTML artifacts to match the new content-hashed URLs.
+   - *Note:* The main JS file is hashed **after** step 1 appended the PWA register script, so its filename reflects its true final content.
+3. **Service worker generation** (when `PWA()` is declared):
+   - Constructs the precache manifest (`pwa.Asset` list with exact URLs and content hashes) from all finalized shell artifacts.
+   - Invokes `app.ServiceWorker` from `webtyp.com/pwa` to generate `sw.js`.
+   - *Note:* The service worker precaches the final content-hashed asset URLs, ensuring that cached resources never become stale or out of sync with HTML markup.
+
+### Development vs. Release behavior
+
+- **Development (`ModeDev`)**: Asset names remain fixed (`style.css`, `script.js`, `icons.svg`) to support instant hot-reloading. Service workers and manifests are omitted so caching does not interfere with active development.
+- **Release (`ModeRelease`)**: Assets are minified, content-hashed, and PWA files (`manifest.webmanifest`, `sw.js`) are emitted when `PWA()` is declared.
+
+### PWA declaration
+
+A project declares its PWA configuration next to `Favicon()` on its root receiver:
+
+```go
+func (a *App) PWA() pwa.Config {
+    return pwa.Config{
+        Name:            "My App",
+        ShortName:       "App",
+        ThemeColor:      "#0080ff",
+        BackgroundColor: "#ffffff",
+    }
+}
+```
+
+Only the root module of a project may declare `PWA()`. Declaring `PWA()` in a non-root module or without declaring `Favicon()` fails the build.
+
+### Serving infrastructure cache headers
+
+When serving release artifacts, the serving layer should configure HTTP response headers as follows:
+
+- **Hashed assets** (`style.3f9a1c2b.css`, `script.816fa8ef.js`, `client.3f9a1c2b.wasm`): `Cache-Control: public, max-age=31536000, immutable`
+- **Shell and dynamic entry points** (`/`, `sw.js`, `manifest.webmanifest`): `Cache-Control: no-cache`
+
+---
+
 ## Related documents
 
 - [SPECS.md](SPECS.md) — exact detection, merge and error behaviour.

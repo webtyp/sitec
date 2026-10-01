@@ -9,6 +9,7 @@ import (
 	"webtyp.com/fmt"
 	"webtyp.com/font"
 	"webtyp.com/html"
+	"webtyp.com/pwa"
 	"webtyp.com/svg/sprite"
 )
 
@@ -23,6 +24,7 @@ type CollectorOutput struct {
 	Pages   []html.Page      `json:"pages"`
 	Site    *Site            `json:"site"`
 	Favicon *FaviconWire     `json:"favicon"`
+	PWA     *pwa.Config      `json:"pwa"`
 }
 
 // fontsWire is the JSON shape for a Declaration (unexported fields cannot marshal).
@@ -60,6 +62,7 @@ type receiverFeature struct {
 	HasPages   bool
 	HasSite    bool
 	HasFavicon bool
+	HasPWA     bool
 }
 
 type moduleAlias struct {
@@ -103,6 +106,7 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 		Pages   []html.Page       `json:"pages"`
 		Site    *Site             `json:"site"`
 		Favicon *faviconWire      `json:"favicon"`
+		PWA     *pwa.Config       `json:"pwa"`
 	}
 
 	// Parse the JSON output
@@ -145,6 +149,7 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 			Pages:   raw.Pages,
 			Site:    raw.Site,
 			Favicon: raw.Favicon,
+			PWA:     raw.PWA,
 		}
 	}
 
@@ -161,6 +166,9 @@ import (
 	"os"
 	{{if .HasAnyPages}}
 	"webtyp.com/html"
+	{{end}}
+	{{if .HasAnyPWA}}
+	"webtyp.com/pwa"
 	{{end}}
 	{{range .Modules}}
 	{{if .HasAnyFeature}}{{.Alias}} "{{.Path}}"{{end}}
@@ -196,6 +204,7 @@ type ssr struct {
 	Fonts   fontsWire    ` + "`json:\"fonts\"`" + `
 	Site    *siteWire    ` + "`json:\"site\"`" + `
 	Favicon *faviconWire ` + "`json:\"favicon\"`" + `
+	{{if .HasAnyPWA}}PWA *pwa.Config ` + "`json:\"pwa\"`" + `{{end}}
 	{{if .HasAnyPages}}Pages []html.Page ` + "`json:\"pages\"`" + `{{end}}
 }
 
@@ -252,6 +261,12 @@ func main() {
 				s.Favicon = &faviconWire{Raster: f.Raster, SVG: f.SVG}
 			}
 			{{end}}
+			{{if .HasPWA}}
+			{
+				c := inst.PWA()
+				s.PWA = &c
+			}
+			{{end}}
 			{{else}}
 			{{if .HasRoot}}s.Root += {{$alias}}.RootCSS().String(){{end}}
 			{{if .HasRender}}s.Render += {{$alias}}.RenderCSS().String(){{end}}
@@ -281,6 +296,12 @@ func main() {
 				s.Favicon = &faviconWire{Raster: f.Raster, SVG: f.SVG}
 			}
 			{{end}}
+			{{if .HasPWA}}
+			{
+				c := {{$alias}}.PWA()
+				s.PWA = &c
+			}
+			{{end}}
 			{{end}}
 		}()
 		{{end}}
@@ -306,11 +327,14 @@ func main() {
 	}
 
 	hasAnyPages := false
+	hasAnyPWA := false
 	for _, m := range aliases {
 		for _, r := range m.Receivers {
 			if r.HasPages {
 				hasAnyPages = true
-				break
+			}
+			if r.HasPWA {
+				hasAnyPWA = true
 			}
 		}
 	}
@@ -318,9 +342,11 @@ func main() {
 	data := struct {
 		Modules     []moduleAlias
 		HasAnyPages bool
+		HasAnyPWA   bool
 	}{
 		Modules:     aliases,
 		HasAnyPages: hasAnyPages,
+		HasAnyPWA:   hasAnyPWA,
 	}
 
 	f, err := os.Create(outputFile)
