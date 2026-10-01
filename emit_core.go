@@ -21,6 +21,7 @@ import (
 	"webtyp.com/font"
 	"webtyp.com/image/favicon"
 	imgmin "webtyp.com/image/min"
+	"webtyp.com/pwa"
 	"webtyp.com/svg/sprite"
 )
 
@@ -80,6 +81,16 @@ func msgFaviconNonRoot(moduleName string) string {
 		"Favicon();", "it", "is", "declared", "by", moduleName).String()
 }
 
+func msgPWANonRoot(moduleName string) string {
+	return lang.Translate(msgPrefix, "only", "the", "root", "module", "may", "declare",
+		"PWA();", "it", "is", "declared", "by", moduleName).String()
+}
+
+func msgPWAWithoutFavicon() string {
+	return lang.Translate(msgPrefix, "the", "project", "declares", "PWA();", "but", "not",
+		"Favicon();", "—", "the", "install", "icons", "come", "from", "Favicon()").String()
+}
+
 func msgEmptyExtraction() string {
 	return lang.Translate(msgPrefix, "empty", "extraction:", "no", "module", "contributed",
 		"assets").String()
@@ -118,6 +129,7 @@ type Compiler struct {
 	fontsMu             sync.RWMutex
 	fonts               font.Declaration // root module only; zero-value = none
 	site                *Site            // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
+	pwa                 *pwa.Config      // declarado por PWA(); nil = no declarado
 	faviconFiles        []favicon.File
 	faviconMu           sync.RWMutex
 	fs                  FS
@@ -274,6 +286,24 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 		}
 		siteOwner = a.ModuleName
 	}
+
+	// 0.4 PWA(): solo el raíz puede declarar.
+	var pwaOwner string
+	var pwaConfig *pwa.Config
+	for _, a := range all {
+		if a == nil || a.PWA == nil {
+			continue
+		}
+		if !a.IsRoot {
+			return fmt.Err(msgPWANonRoot(a.ModuleName))
+		}
+		if pwaOwner != "" {
+			return fmt.Err(msgPWANonRoot(a.ModuleName))
+		}
+		pwaOwner = a.ModuleName
+		pwaConfig = a.PWA
+	}
+	c.pwa = pwaConfig
 
 	// 0.5 Favicon(): solo el raíz puede declarar. Derivar y escribir el juego completo.
 	var faviconOwner string

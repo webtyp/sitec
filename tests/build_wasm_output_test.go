@@ -87,8 +87,8 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
 		t.Fatalf("Build failed: %v", err)
 	}
 
-	if out.Filename != "client.wasm" {
-		t.Errorf("expected filename 'client.wasm', got %q", out.Filename)
+	if !strings.HasPrefix(out.Filename, "client.") || !strings.HasSuffix(out.Filename, ".wasm") {
+		t.Errorf("expected hashed filename 'client.<hash>.wasm', got %q", out.Filename)
 	}
 
 	if len(out.Binary) == 0 {

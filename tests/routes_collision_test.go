@@ -109,7 +109,7 @@ func Routes(r router.Router) {
 	outDir := filepath.Join(root, "out")
 	_, err := sitec.BuildWithConfig(sitec.BuildConfig{
 		RootDir:   root,
-		Mode:      sitec.ModeRelease,
+		Mode:      sitec.ModeDev,
 		OutputDir: outDir,
 	})
 	if err == nil {

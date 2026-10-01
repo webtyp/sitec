@@ -4,6 +4,7 @@ import (
 	"webtyp.com/font"
 	"webtyp.com/html"
 	"webtyp.com/js"
+	"webtyp.com/pwa"
 	"webtyp.com/svg/sprite"
 )
 
@@ -26,6 +27,7 @@ type Assets struct {
 	Pages       []html.Page
 	Site        *Site        // declarado por RenderSite(); solo el raíz puede; nil = no declarado
 	Favicon     *FaviconWire // declarado por Favicon(); solo el raíz puede; nil = no declarado
+	PWA         *pwa.Config  // declared by PWA(); root only; nil = not declared
 	IsRoot      bool
 	IsFramework bool
 }

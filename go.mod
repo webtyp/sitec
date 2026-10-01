@@ -1,6 +1,6 @@
 module webtyp.com/sitec
 
-go 1.25.2
+go 1.26.8
 
 require (
 	github.com/tdewolff/minify/v2 v2.24.8
@@ -27,4 +27,5 @@ require (
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/json v0.5.27 // indirect
 	webtyp.com/model v0.1.9 // indirect
+	webtyp.com/pwa v0.1.0 // indirect
 )
