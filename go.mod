@@ -9,7 +9,7 @@ require (
 	webtyp.com/fmt v1.0.0
 	webtyp.com/font v0.0.5
 	webtyp.com/html v0.0.24
-	webtyp.com/image v0.1.3
+	webtyp.com/image v0.1.11
 	webtyp.com/js v0.0.11
 	webtyp.com/modfind v0.0.9
 	webtyp.com/router v0.3.0
