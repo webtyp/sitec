@@ -2,8 +2,9 @@
 PLAN: "feat: content-hashed release names and PWA() — sitec emits manifest.webmanifest and sw.js through webtyp/pwa"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11908958760702728851
+PR: https://github.com/webtyp/sitec/pull/26
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
