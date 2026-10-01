@@ -6,10 +6,10 @@ REVIEWER: none
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
 >
-> **ON HOLD — rename to `docs/PLAN.md` to dispatch, only when all of these are published:**
-> `webtyp.com/pwa` with `pwa.New` / `App.ServiceWorker` (v0.1.x), `webtyp.com/js` with
-> `PageBootstrap(wasmURL)` (`js/docs/PLAN.md`), `webtyp.com/image` ≥ v0.1.11 (`icon-512.png`, already
-> published). Before dispatching, re-check every symbol named here against those tags.
+> Dependencies, all published: `webtyp.com/pwa` v0.1.0 (`pwa.New`, `App.ServiceWorker`),
+> `webtyp.com/js` v0.1.0 (`PageBootstrap(wasmURL)`, `DefaultWasmURL`), `webtyp.com/image` v0.1.11
+> (`icon-512.png`). Run `go get webtyp.com/pwa@v0.1.0` first. `wasm_builder_exec.go` already calls
+> `js.PageBootstrap(js.DefaultWasmURL)`; Stage 2 changes that argument.
 
 # Plan — `sitec`: hashed names in release builds, and `PWA()`
 
@@ -80,8 +80,8 @@ Follow every place `Favicon` appears in the extraction path and add `PWA` next t
 `wasm_builder_exec.go`:
 - After reading `binary`, when the builder is **not** in dev mode, set
   `wasmFilename = hashedName(wasmFilename, binary)` (Stage 3 helper) → `client.3f9a1c2b.wasm`.
-- `runtimeJS := js.PageBootstrap("/" + wasmFilename).Content` (dev: `"/" + "client.wasm"`, which
-  equals `js.DefaultWasmURL`).
+- `runtimeJS := js.PageBootstrap("/" + wasmFilename).Content` (today it passes
+  `js.DefaultWasmURL`; in dev `"/" + "client.wasm"` equals it).
 - `WasmOutput.Filename` is that name; `buildPipeline` already writes it with `c.Write` and passes it
   to `c.SetWasm`.
 - `emit_events.go` `startCodeJS`: delete the `if filename != "" && filename != "client.wasm" {
@@ -189,7 +189,7 @@ name. A non-root module declaring `PWA()` → error from `msgPWANonRoot`.
 
 - `gotest` green.
 - `grep -n "ReplaceAll(runtime" emit_events.go` → empty.
-- `grep -rn "PageBootstrap()" --include=*.go .` → empty.
+- `grep -rn "PageBootstrap(js.DefaultWasmURL)" wasm_builder_exec.go` → empty (it passes the built name).
 
 | Stage | Files | Done when |
 |---|---|---|
