@@ -5,6 +5,7 @@ package sitec_test
 import (
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -37,7 +38,7 @@ require (
 	webtyp.com/css v0.4.15
 	webtyp.com/svg v0.1.21
 )
-` + webtypReplaces(t))
+`+webtypReplaces(t))
 		write(filepath.Join(depDir, "widget", "css.go"), `//go:build !wasm
 
 package widget
@@ -159,7 +160,8 @@ func (p *PageProducer) RenderSite() *sitec.Site {
 		var shieldContent string
 
 		for _, a := range artifacts {
-			if strings.HasSuffix(a.Path, "style.css") {
+			// Release builds name the stylesheet by its content hash: style.<hash>.css.
+			if base := path.Base(a.Path); strings.HasPrefix(base, "style.") && strings.HasSuffix(base, ".css") {
 				cssContent = string(a.Content)
 			}
 			if a.Mediatype == "text/html" {

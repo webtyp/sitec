@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -85,8 +86,10 @@ func (a *App) Favicon() favicon.Source {
 
 func (a *App) PWA() pwa.Config {
 	return pwa.Config{
-		Name:      "My PWA App",
-		ShortName: "PWA",
+		Name:            "My PWA App",
+		ShortName:       "PWA",
+		ThemeColor:      "#0055ff",
+		BackgroundColor: "#ffffff",
 	}
 }
 
@@ -129,14 +132,16 @@ func TestPWABuildRelease(t *testing.T) {
 		if a.Path == "/" || a.Path == "/index.html" {
 			htmlContent = string(a.Content)
 		}
-		if strings.HasPrefix(a.Path, "/style.") && strings.HasSuffix(a.Path, ".css") {
+		// An app without pages emits relative URLs (style.<hash>.css), a site absolute ones.
+		base := path.Base(a.Path)
+		if strings.HasPrefix(base, "style.") && strings.HasSuffix(base, ".css") && base != "style.css" {
 			hasHashedCSS = true
 		}
-		if strings.HasPrefix(a.Path, "/script.") && strings.HasSuffix(a.Path, ".js") {
+		if strings.HasPrefix(base, "script.") && strings.HasSuffix(base, ".js") && base != "script.js" {
 			hasHashedJS = true
 		}
-		if a.Path == "/style.css" {
-			t.Errorf("found unhashed /style.css in release build")
+		if base == "style.css" || base == "script.js" {
+			t.Errorf("found unhashed %s in release build", a.Path)
 		}
 	}
 

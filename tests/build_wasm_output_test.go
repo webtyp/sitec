@@ -90,6 +90,9 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
 	if !strings.HasPrefix(out.Filename, "client.") || !strings.HasSuffix(out.Filename, ".wasm") {
 		t.Errorf("expected hashed filename 'client.<hash>.wasm', got %q", out.Filename)
 	}
+	if !strings.Contains(out.Runtime, `fetch("/`+out.Filename+`")`) {
+		t.Errorf("bootstrap does not load the hashed binary %q", out.Filename)
+	}
 
 	if len(out.Binary) == 0 {
 		t.Error("expected non-empty binary")
@@ -214,5 +217,25 @@ func TestWasmBuild_CompilesSiblingFilesInSamePackage(t *testing.T) {
 	}
 	if len(out.Binary) == 0 {
 		t.Error("Binary is empty")
+	}
+}
+
+// An edge Worker binary built with TinyGo (goflare) is referenced by name in the deploy config:
+// only the release page binary is content-hashed, never a NewWasmBuilder output.
+func TestWasmbuild_NewWasmBuilderTinyGoKeepsFixedName(t *testing.T) {
+	tmpDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "main.go"), []byte("package main\nfunc main() {}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	wb := sitec.NewWasmBuilder(false, sitec.WasmBuildOptions{Entry: "main.go", OutputName: "edge"})
+	out, err := wb.Build(tmpDir)
+	if err != nil {
+		t.Fatalf("Build failed: %v", err)
+	}
+	if out.Filename != "edge.wasm" {
+		t.Errorf("Filename = %q, want %q", out.Filename, "edge.wasm")
 	}
 }
