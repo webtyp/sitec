@@ -38,7 +38,7 @@ func TestCaso1_ReadSirveGlueYCssRelativizadosDesdeMemoria(t *testing.T) {
 	am.SetFS(NewMemFS()) // modo memoria: diskMirrored permanece false
 
 	// El demonio registra el bootstrap del WASM así (section-build.go).
-	if err := am.UpdateSSRModule("bootstrap", "", []*js.Script{js.PageBootstrap()}, "", nil); err != nil {
+	if err := am.UpdateSSRModule("bootstrap", "", []*js.Script{js.PageBootstrap(js.DefaultWasmURL)}, "", nil); err != nil {
 		t.Fatalf("UpdateSSRModule(bootstrap): %v", err)
 	}
 

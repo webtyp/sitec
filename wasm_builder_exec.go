@@ -121,7 +121,7 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	} else {
 		js.SetRuntime(js.RuntimeGo)
 	}
-	runtimeJS := js.PageBootstrap().Content
+	runtimeJS := js.PageBootstrap(js.DefaultWasmURL).Content
 
 	return WasmOutput{
 		Binary:   binary,
