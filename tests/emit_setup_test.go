@@ -3,10 +3,10 @@
 package sitec_test
 
 import (
-	"webtyp.com/sitec"
 	"os"
 	"path/filepath"
 	"testing"
+	"webtyp.com/sitec"
 )
 
 // TestEnvironment holds all the paths and components needed for asset tests
@@ -17,7 +17,6 @@ type TestEnvironment struct {
 	ModulesDir    string
 	MainJsPath    string
 	MainCssPath   string
-	MainSvgPath   string
 	MainHtmlPath  string
 	AssetsHandler *sitec.Compiler
 	t             *testing.T
@@ -79,7 +78,6 @@ func setupTestEnv(testCase string, t *testing.T, objects ...any) *TestEnvironmen
 		ModulesDir:    modulesDir,
 		MainJsPath:    assetsHandler.GetMainJsPath(),
 		MainCssPath:   assetsHandler.GetMainCssPath(),
-		MainSvgPath:   assetsHandler.GetMainSvgPath(),
 		MainHtmlPath:  assetsHandler.GetMainHtmlPath(),
 		AssetsHandler: assetsHandler,
 		t:             t,

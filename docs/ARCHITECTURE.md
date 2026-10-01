@@ -146,7 +146,9 @@ In release builds (`ModeRelease`), `sitec` executes a pure finalization pass (`f
    - Appends `app.RegisterScript` to the main JS script artifact.
    - Generates `manifest.webmanifest`.
 2. **Content hashing and reference rewriting**:
-   - Computes SHA-256 content hashes for the main CSS, JS, and SVG sprite artifacts.
+   - Computes SHA-256 content hashes for the main CSS and JS artifacts. The icon sprite has no
+     file of its own: it is rendered inside every HTML page, the only place where `<use href="#id">`
+     symbols can be styled by CSS and manipulated through the DOM.
    - Renames them to content-hashed paths (e.g., `style.3f9a1c2b.css`).
    - Rewrites all quoted references inside HTML artifacts to match the new content-hashed URLs.
    - *Note:* The main JS file is hashed **after** step 1 appended the PWA register script, so its filename reflects its true final content.
@@ -157,7 +159,7 @@ In release builds (`ModeRelease`), `sitec` executes a pure finalization pass (`f
 
 ### Development vs. Release behavior
 
-- **Development (`ModeDev`)**: Asset names remain fixed (`style.css`, `script.js`, `icons.svg`) to support instant hot-reloading. Service workers and manifests are omitted so caching does not interfere with active development.
+- **Development (`ModeDev`)**: Asset names remain fixed (`style.css`, `script.js`) to support instant hot-reloading. Service workers and manifests are omitted so caching does not interfere with active development.
 - **Release (`ModeRelease`)**: Assets are minified, content-hashed, and PWA files (`manifest.webmanifest`, `sw.js`) are emitted when `PWA()` is declared.
 
 ### PWA declaration

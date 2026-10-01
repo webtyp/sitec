@@ -5,7 +5,7 @@ Instrucciones obligatorias para cualquier agente que trabaje en este repositorio
 ## Qué es este repo
 
 `sitec` es el **compilador de sitio**: toma un árbol de fuentes Go y produce la
-superficie estática desplegable — hoja de estilos, bundle de scripts, sprite SVG,
+superficie estática desplegable — hoja de estilos, bundle de scripts, sprite SVG (dentro del HTML, nunca como archivo aparte),
 declaración de fuentes y shell HTML. Corre hasta terminar y sale.
 
 Es un compilador, no un servidor ni un renderizador. El nombre sigue la

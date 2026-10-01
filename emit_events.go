@@ -34,9 +34,11 @@ func (c *Compiler) UpdateFileContentInMemory(filePath, extension, event string, 
 			c.updateHtmlFaviconLinks()
 			return c.faviconSvgHandler, err
 		}
-		// Otherwise treat as sprite icon
-		err := c.spriteSvgHandler.UpdateContent(filePath, event, file)
-		return c.spriteSvgHandler, err
+		// Any other .svg is an icon: it joins the sprite, which lives inside the HTML.
+		if err := c.addIconFile(filepath.Base(filePath), string(file.Content)); err != nil {
+			return nil, err
+		}
+		return c.indexHtmlHandler, nil
 
 	case ".html":
 		err := c.indexHtmlHandler.UpdateContent(filePath, event, file)
@@ -50,13 +52,11 @@ func (c *Compiler) isOutputPath(filePath string) bool {
 	normalizedFilePath := filepath.Clean(filePath)
 	cssOutputPath := filepath.Clean(c.mainStyleCssHandler.outputPath)
 	jsOutputPath := filepath.Clean(c.mainJsHandler.outputPath)
-	svgOutputPath := filepath.Clean(c.spriteSvgHandler.outputPath)
 	faviconOutputPath := filepath.Clean(c.faviconSvgHandler.outputPath)
 	htmlHandlerOutputPath := filepath.Clean(c.indexHtmlHandler.outputPath)
 
 	if normalizedFilePath == cssOutputPath ||
 		normalizedFilePath == jsOutputPath ||
-		normalizedFilePath == svgOutputPath ||
 		normalizedFilePath == faviconOutputPath ||
 		normalizedFilePath == htmlHandlerOutputPath {
 		return true
@@ -65,13 +65,11 @@ func (c *Compiler) isOutputPath(filePath string) bool {
 	normalizedFilePathLower := strings.ToLower(normalizedFilePath)
 	cssOutputPathLower := strings.ToLower(cssOutputPath)
 	jsOutputPathLower := strings.ToLower(jsOutputPath)
-	svgOutputPathLower := strings.ToLower(svgOutputPath)
 	faviconOutputPathLower := strings.ToLower(faviconOutputPath)
 	htmlHandlerOutputPathLower := strings.ToLower(htmlHandlerOutputPath)
 
 	return normalizedFilePathLower == cssOutputPathLower ||
 		normalizedFilePathLower == jsOutputPathLower ||
-		normalizedFilePathLower == svgOutputPathLower ||
 		normalizedFilePathLower == faviconOutputPathLower ||
 		normalizedFilePathLower == htmlHandlerOutputPathLower
 }
@@ -126,7 +124,7 @@ func (c *Compiler) NewFileEvent(fileName, extension, filePath, event string) err
 		if err := c.addIconFile(fileName, string(content)); err != nil {
 			return err
 		}
-		return c.processAsset(fhForUnlocks(c, c.spriteSvgHandler))
+		return c.processAsset(fhForUnlocks(c, c.indexHtmlHandler))
 	}
 	fh, err := c.UpdateFileContentInMemory(filePath, extension, event, content)
 	if err != nil {
@@ -162,7 +160,6 @@ func (c *Compiler) UnobservedFiles() []string {
 	out := []string{
 		c.mainStyleCssHandler.outputPath,
 		c.mainJsHandler.outputPath,
-		c.spriteSvgHandler.outputPath,
 	}
 	if c.imageProcessor != nil {
 		out = append(out, c.imageProcessor.UnobservedFiles()...)

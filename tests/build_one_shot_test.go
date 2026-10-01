@@ -95,16 +95,17 @@ replace webtyp.com/sitec => ` + repoRoot + "\n" + webtypReplaces(t)
 		t.Errorf("expected style.css to contain background-color, got: %s", string(cssContent))
 	}
 
-	// 3. Assert icons.svg exists and is non-empty
-	svgContent, err := os.ReadFile(releaseHashed(t, outDir, "icons", ".svg"))
+	// 3. The icon sprite lives only inside the HTML: no icons*.svg file, and index.html
+	// carries the consumer's symbol.
+	if matches, _ := filepath.Glob(filepath.Join(outDir, "icons*.svg")); len(matches) != 0 {
+		t.Errorf("a sprite file was written: %v; the sprite must live only in index.html", matches)
+	}
+	htmlContent, err := os.ReadFile(filepath.Join(outDir, "index.html"))
 	if err != nil {
-		t.Fatalf("expected icons.svg to be emitted: %v", err)
+		t.Fatalf("expected index.html to be emitted: %v", err)
 	}
-	if len(svgContent) == 0 {
-		t.Errorf("expected icons.svg to be non-empty")
-	}
-	if !strings.Contains(string(svgContent), "consumer-icon") {
-		t.Errorf("expected icons.svg to contain consumer-icon, got: %s", string(svgContent))
+	if !strings.Contains(string(htmlContent), "consumer-icon") {
+		t.Errorf("expected index.html to contain the consumer-icon symbol")
 	}
 }
 

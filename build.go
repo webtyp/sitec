@@ -403,7 +403,6 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		arts, err := finalizeRelease(c.List(), releaseInput{
 			CSSURL:    c.mainStyleCssHandler.GetURLPath(),
 			JSURL:     c.mainJsHandler.GetURLPath(),
-			SpriteURL: c.spriteSvgHandler.GetURLPath(),
 			PWA:       c.pwa,
 			Favicons:  c.getFaviconFiles(),
 			Log:       c.log,

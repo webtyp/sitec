@@ -93,7 +93,7 @@ func TestFlushToDisk_WritesAllRegisteredAssets(t *testing.T) {
 	}
 
 	for _, expected := range []string{
-		env.MainJsPath, env.MainCssPath, env.MainSvgPath,
+		env.MainJsPath, env.MainCssPath,
 	} {
 		if _, err := os.Stat(expected); err != nil {
 			t.Errorf("expected on disk after flush: %s — %v", expected, err)

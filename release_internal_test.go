@@ -34,16 +34,14 @@ func TestHashedName(t *testing.T) {
 
 func TestFinalizeRelease_RenamesAndRewritesHTML(t *testing.T) {
 	arts := []Artifact{
-		{Path: "/", Mediatype: "text/html", Content: []byte(`<!doctype html><html><head><link rel="stylesheet" href="/style.css"></head><body><script src="/script.js"></script><use href="/icons.svg#icon"></use></body></html>`)},
+		{Path: "/", Mediatype: "text/html", Content: []byte(`<!doctype html><html><head><link rel="stylesheet" href="/style.css"></head><body><script src="/script.js"></script><svg><use href="#icon"></use></svg></body></html>`)},
 		{Path: "/style.css", Mediatype: "text/css", Content: []byte("body{margin:0}")},
 		{Path: "/script.js", Mediatype: "text/javascript", Content: []byte("console.log('hi')")},
-		{Path: "/icons.svg", Mediatype: "image/svg+xml", Content: []byte("<svg></svg>")},
 	}
 
 	in := releaseInput{
-		CSSURL:    "/style.css",
-		JSURL:     "/script.js",
-		SpriteURL: "/icons.svg",
+		CSSURL: "/style.css",
+		JSURL:  "/script.js",
 	}
 
 	out, err := finalizeRelease(arts, in)
@@ -52,7 +50,7 @@ func TestFinalizeRelease_RenamesAndRewritesHTML(t *testing.T) {
 	}
 
 	var htmlContent string
-	var foundCSS, foundJS, foundSprite bool
+	var foundCSS, foundJS bool
 	for _, a := range out {
 		if a.Path == "/" {
 			htmlContent = string(a.Content)
@@ -63,19 +61,16 @@ func TestFinalizeRelease_RenamesAndRewritesHTML(t *testing.T) {
 		if a.Path == "/script.js" {
 			foundJS = true
 		}
-		if a.Path == "/icons.svg" {
-			foundSprite = true
-		}
 		if a.Path == pwa.ManifestPath || a.Path == pwa.ServiceWorkerPath {
 			t.Fatalf("unexpected PWA artifact in release without PWA: %s", a.Path)
 		}
 	}
 
-	if foundCSS || foundJS || foundSprite {
-		t.Fatalf("unhashed assets should have been renamed: CSS=%v, JS=%v, Sprite=%v", foundCSS, foundJS, foundSprite)
+	if foundCSS || foundJS {
+		t.Fatalf("unhashed assets should have been renamed: CSS=%v, JS=%v", foundCSS, foundJS)
 	}
 
-	if strings.Contains(htmlContent, `"/style.css"`) || strings.Contains(htmlContent, `"/script.js"`) || strings.Contains(htmlContent, `"/icons.svg"`) {
+	if strings.Contains(htmlContent, `"/style.css"`) || strings.Contains(htmlContent, `"/script.js"`) {
 		t.Fatalf("HTML still references unhashed URLs: %s", htmlContent)
 	}
 }

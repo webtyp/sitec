@@ -7,10 +7,6 @@ import (
 	"webtyp.com/svg/sprite"
 )
 
-func NewSvgHandler(ac *Config, filename string) *asset {
-	return newAssetFile(filename, "image/svg+xml", ac, nil)
-}
-
 func NewFaviconSvgHandler(ac *Config, filename string) *asset {
 	return newAssetFile(filename, "image/svg+xml", ac, nil)
 }
@@ -42,7 +38,14 @@ func (c *Compiler) renderSprite() string {
 	return c.renderSpriteNoLock()
 }
 
+// setModuleSprite updates the sprite, then invalidates the HTML that renders it (after spriteMu is
+// released, see addIcon).
 func (c *Compiler) setModuleSprite(name string, icons *sprite.Sprite) {
+	c.setModuleSpriteLocked(name, icons)
+	c.indexHtmlHandler.InvalidateCache()
+}
+
+func (c *Compiler) setModuleSpriteLocked(name string, icons *sprite.Sprite) {
 	c.spriteMu.Lock()
 	defer c.spriteMu.Unlock()
 	if icons == nil {
@@ -53,13 +56,23 @@ func (c *Compiler) setModuleSprite(name string, icons *sprite.Sprite) {
 		}
 		c.moduleSprites[name] = icons
 	}
-	c.spriteSvgHandler.InvalidateCache()
 }
 
 // addIcon adds an icon body with its explicit viewBox (the InjectSpriteIcon path).
 // viewBox is required: a symbol rendered in a box it was not drawn for is clipped
 // or misaligned, and no default can recover the source coordinate system.
+// addIcon updates the sprite, then invalidates the HTML that renders it. The HTML cache is
+// invalidated after spriteMu is released: rendering the HTML takes the HTML lock and then
+// spriteMu, so invalidating while holding spriteMu would invert that order and deadlock.
 func (c *Compiler) addIcon(id, content, viewBox string) error {
+	if err := c.addIconLocked(id, content, viewBox); err != nil {
+		return err
+	}
+	c.indexHtmlHandler.InvalidateCache()
+	return nil
+}
+
+func (c *Compiler) addIconLocked(id, content, viewBox string) error {
 	c.spriteMu.Lock()
 	defer c.spriteMu.Unlock()
 
@@ -80,13 +93,23 @@ func (c *Compiler) addIcon(id, content, viewBox string) error {
 	}
 
 	s.AddRaw(id, content, viewBox)
-	c.spriteSvgHandler.InvalidateCache()
 	return nil
 }
 
 // addIconFile adds a whole .svg file as an icon. Reading the file's viewBox and
 // stripping its root element is sprite's job — assetmin does not parse SVG.
+// addIconFile updates the sprite, then invalidates the HTML that renders it. The HTML cache is
+// invalidated after spriteMu is released: rendering the HTML takes the HTML lock and then
+// spriteMu, so invalidating while holding spriteMu would invert that order and deadlock.
 func (c *Compiler) addIconFile(id, content string) error {
+	if err := c.addIconFileLocked(id, content); err != nil {
+		return err
+	}
+	c.indexHtmlHandler.InvalidateCache()
+	return nil
+}
+
+func (c *Compiler) addIconFileLocked(id, content string) error {
 	c.spriteMu.Lock()
 	defer c.spriteMu.Unlock()
 
@@ -106,7 +129,6 @@ func (c *Compiler) addIconFile(id, content string) error {
 	if err := s.AddFile(id, content); err != nil {
 		return err
 	}
-	c.spriteSvgHandler.InvalidateCache()
 	return nil
 }
 

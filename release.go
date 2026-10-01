@@ -34,14 +34,14 @@ func hashedName(name string, content []byte) string {
 
 // releaseInput is what the final pass needs from the compiler.
 type releaseInput struct {
-	CSSURL, JSURL, SpriteURL string         // GetURLPath() of the three main handlers ("" = absent)
-	PWA                      *pwa.Config    // nil = the project is not a PWA
-	Favicons                 []favicon.File // c.getFaviconFiles()
-	Log                      func(...any)
+	CSSURL, JSURL string         // GetURLPath() of the main stylesheet and script ("" = absent)
+	PWA           *pwa.Config    // nil = the project is not a PWA
+	Favicons      []favicon.File // c.getFaviconFiles()
+	Log           func(...any)
 }
 
 // finalizeRelease returns the artifacts of a release build: PWA tags and register script
-// inserted (when PWA != nil), the main CSS, JS and sprite renamed by content hash with every
+// inserted (when PWA != nil), the main CSS and JS renamed by content hash with every
 // HTML reference rewritten, and manifest.webmanifest + sw.js added (when PWA != nil).
 func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 	out := make([]Artifact, len(arts))
@@ -104,7 +104,7 @@ func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 	}
 
 	// 2. Hashed names (always in release)
-	targetURLs := []string{in.CSSURL, in.JSURL, in.SpriteURL}
+	targetURLs := []string{in.CSSURL, in.JSURL}
 	renames := make(map[string]string) // oldURL -> newURL
 
 	for _, old := range targetURLs {

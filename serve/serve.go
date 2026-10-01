@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	spriteFile    = "/icons.svg"
 	notFoundBody  = "404 no encontrado"
 	mediatypeText = "text/plain; charset=utf-8"
 )
@@ -23,13 +22,6 @@ const (
 func RegisterRoutes(r router.Router, fs sitec.FS) {
 	r.PublicAsset("/", func(ctx router.Context) {
 		key := ctx.Path()
-
-		if key == spriteFile || strings.HasSuffix(key, spriteFile) {
-			ctx.SetHeader("Content-Type", mediatypeText)
-			ctx.WriteStatus(404)
-			ctx.Write([]byte(notFoundBody))
-			return
-		}
 
 		content, mediatype, ok := fs.Read(key)
 		if !ok {

@@ -2,7 +2,7 @@
 <img src="docs/img/badges.svg">
 
 Compilador de sitio: toma un árbol de fuentes Go y produce la superficie
-estática desplegable del sitio — hoja de estilos, bundle de scripts, sprite SVG,
+estática desplegable del sitio — hoja de estilos, bundle de scripts, sprite SVG (dentro del HTML, nunca como archivo aparte),
 declaración de fuentes y shell HTML.
 
 Corre hasta terminar y sale. Es un compilador, no un servidor ni un

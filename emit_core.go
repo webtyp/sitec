@@ -106,7 +106,6 @@ type Compiler struct {
 	*Config
 	mainStyleCssHandler *asset
 	mainJsHandler       *asset
-	spriteSvgHandler    *asset
 	faviconSvgHandler   *asset
 	indexHtmlHandler    *asset
 	min                 *minify.M
@@ -258,18 +257,15 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 	cssFile := filepath.Base(c.mainStyleCssHandler.urlPath)
 	jsFile := filepath.Base(c.mainJsHandler.urlPath)
 	faviconFile := filepath.Base(c.faviconSvgHandler.urlPath)
-	spriteFile := filepath.Base(c.spriteSvgHandler.urlPath)
 
 	if hasPages {
 		c.mainStyleCssHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, cssFile)
 		c.mainJsHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, jsFile)
 		c.faviconSvgHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, faviconFile)
-		c.spriteSvgHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, spriteFile)
 	} else {
 		c.mainStyleCssHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, cssFile)
 		c.mainJsHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, jsFile)
 		c.faviconSvgHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, faviconFile)
-		c.spriteSvgHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, spriteFile)
 	}
 
 	// 0. RenderSite(): solo el raíz describe el sitio, y solo uno. El aviso de
@@ -544,20 +540,17 @@ func NewCompiler(ac *Config) *Compiler {
 
 	jsMainFileName := "script.js"
 	cssMainFileName := "style.css"
-	svgMainFileName := "icons.svg"
 	svgFaviconFileName := "favicon.svg"
 	htmlMainFileName := "index.html"
 
 	c.mainStyleCssHandler = newAssetFile(cssMainFileName, "text/css", ac, nil)
 	c.mainJsHandler = newAssetFile(jsMainFileName, "text/javascript", ac, nil)
-	c.spriteSvgHandler = NewSvgHandler(ac, svgMainFileName)
 	c.faviconSvgHandler = NewFaviconSvgHandler(ac, svgFaviconFileName)
 
 	// Set URL paths before creating the index handler that depends on them
 	c.mainStyleCssHandler.urlPath = path.Join("/", ac.AssetsURLPrefix, cssMainFileName)
 	c.mainJsHandler.urlPath = path.Join("/", ac.AssetsURLPrefix, jsMainFileName)
 	c.faviconSvgHandler.urlPath = path.Join("/", ac.AssetsURLPrefix, svgFaviconFileName)
-	c.spriteSvgHandler.urlPath = path.Join("/", ac.AssetsURLPrefix, svgMainFileName)
 
 	c.indexHtmlHandler = NewHtmlHandler(ac, htmlMainFileName, c.mainStyleCssHandler.GetURLPath(), c.mainJsHandler.GetURLPath(), c.faviconSvgHandler.GetURLPath())
 	c.indexHtmlHandler.urlPath = "/" // Index is always at root
@@ -579,19 +572,15 @@ func NewCompiler(ac *Config) *Compiler {
 	// Register main assets
 	for _, a := range []*asset{
 		c.mainStyleCssHandler, c.mainJsHandler,
-		c.spriteSvgHandler, c.faviconSvgHandler, c.indexHtmlHandler,
+		c.faviconSvgHandler, c.indexHtmlHandler,
 	} {
 		c.allAssets[a.outputPath] = a
 	}
 
-	// Automatic Sprite Injection:
-	// Link the Sprite Handler to the HTML Handler so the sprite is injected dynamically
-	// into the HTML body. This avoids manual injection in build scripts.
+	// The icon sprite lives only inside the HTML: a <symbol> referenced by href="#id" from the
+	// same document is the one form CSS can style and the DOM can manipulate. There is no
+	// separate icons.svg file.
 	c.indexHtmlHandler.AddDynamicContent(func() []byte {
-		return []byte(c.renderSprite())
-	})
-
-	c.spriteSvgHandler.AddDynamicContent(func() []byte {
 		return []byte(c.renderSprite())
 	})
 
@@ -653,10 +642,8 @@ func (c *Compiler) refreshAsset(extension string) {
 		}
 	case ".css":
 		handlers = append(handlers, c.mainStyleCssHandler)
-	case ".html":
+	case ".html", ".svg": // the icon sprite is part of the HTML
 		handlers = append(handlers, c.indexHtmlHandler)
-	case ".svg":
-		handlers = append(handlers, c.spriteSvgHandler)
 	}
 
 	for _, fh := range handlers {

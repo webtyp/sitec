@@ -53,11 +53,6 @@ func (c *Compiler) GetMainCssPath() string {
 	return c.mainStyleCssHandler.outputPath
 }
 
-// GetMainSvgPath returns the output path of the main SVG file.
-func (c *Compiler) GetMainSvgPath() string {
-	return c.spriteSvgHandler.outputPath
-}
-
 // GetMainHtmlPath returns the output path of the main HTML file.
 func (c *Compiler) GetMainHtmlPath() string {
 	return c.indexHtmlHandler.outputPath
@@ -108,11 +103,6 @@ func (c *Compiler) GetJSURLPath() string {
 // GetCSSURLPath returns the URL path for the main CSS file.
 func (c *Compiler) GetCSSURLPath() string {
 	return c.mainStyleCssHandler.GetURLPath()
-}
-
-// GetSVGURLPath returns the URL path for the SVG sprite file.
-func (c *Compiler) GetSVGURLPath() string {
-	return c.spriteSvgHandler.GetURLPath()
 }
 
 // GetFaviconURLPath returns the URL path for the favicon file.

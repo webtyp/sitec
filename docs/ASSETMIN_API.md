@@ -121,7 +121,7 @@ Registers handlers:
 - `GET /<prefix>script.js`
 - `GET /<prefix>favicon.svg`
 
-Las rutas de `script.js`, `style.css`, `icons.svg` y `favicon.svg` se guardan relativas cuando el build no declara páginas (shell WASM). `Read` las resuelve contra la clave absoluta de la petición sin la barra inicial.
+Las rutas de `script.js`, `style.css` y `favicon.svg` se guardan relativas cuando el build no declara páginas (shell WASM). `Read` las resuelve contra la clave absoluta de la petición sin la barra inicial.
 
 ## Asset Types
 

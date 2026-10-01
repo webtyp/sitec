@@ -5,6 +5,7 @@ package sitec_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -17,7 +18,7 @@ func TestAssets(t *testing.T) {
 		env := setupTestEnv("uc01_basic_flow", t)
 		env.CreateFile("style.css", "body { color: red; }")
 		env.CreateFile("script.js", "console.log('hello');")
-		env.CreateFile("icon.svg", "<svg><path d='M0 0h10v10H0z'/></svg>")
+		env.CreateFile("icon.svg", "<svg viewBox='0 0 10 10'><path d='M0 0h10v10H0z'/></svg>")
 		env.CreateFile("index.html", "<html><body><h1>Hello</h1></body></html>")
 
 		if err := env.AssetsHandler.FlushToDisk(); err != nil {
@@ -25,11 +26,18 @@ func TestAssets(t *testing.T) {
 		}
 
 		// Verificar que los archivos existan en el directorio de salida
-		for _, file := range []string{"style.css", "script.js", "icons.svg", "index.html"} {
+		for _, file := range []string{"style.css", "script.js", "index.html"} {
 			path := filepath.Join(env.OutDir, file)
 			if _, err := os.Stat(path); os.IsNotExist(err) {
 				t.Errorf("File %s not found in output directory", file)
 			}
+		}
+		// The icon sprite lives only inside the HTML: no icons.svg is ever written.
+		if _, err := os.Stat(filepath.Join(env.OutDir, "icons.svg")); err == nil {
+			t.Error("icons.svg was written; the sprite must live only in index.html")
+		}
+		if html, err := os.ReadFile(filepath.Join(env.OutDir, "index.html")); err != nil || !strings.Contains(string(html), `id="icon.svg"`) {
+			t.Errorf("index.html does not carry the icon symbol: %v", err)
 		}
 		env.CleanDirectory()
 	})
