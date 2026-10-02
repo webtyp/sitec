@@ -15,6 +15,7 @@ import (
 	"github.com/tdewolff/minify/v2/js"
 	minifySvg "github.com/tdewolff/minify/v2/svg"
 	"github.com/tdewolff/minify/v2/xml"
+	"webtyp.com/artifacts"
 	twcss "webtyp.com/css"
 	"webtyp.com/fmt"
 	"webtyp.com/fmt/lang"
@@ -86,6 +87,11 @@ func msgPWANonRoot(moduleName string) string {
 		"PWA();", "it", "is", "declared", "by", moduleName).String()
 }
 
+func msgArtifactsNonRoot(moduleName string) string {
+	return lang.Translate(msgPrefix, "only", "the", "root", "module", "may", "declare",
+		"Artifacts();", "it", "is", "declared", "by", moduleName).String()
+}
+
 func msgPWAWithoutFavicon() string {
 	return lang.Translate(msgPrefix, "the", "project", "declares", "PWA();", "but", "not",
 		"Favicon();", "—", "the", "install", "icons", "come", "from", "Favicon()").String()
@@ -126,9 +132,10 @@ type Compiler struct {
 	moduleSprites       map[string]*sprite.Sprite
 	spriteMu            sync.RWMutex
 	fontsMu             sync.RWMutex
-	fonts               font.Declaration // root module only; zero-value = none
-	site                *Site            // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
-	pwa                 *pwa.Config      // declarado por PWA(); nil = no declarado
+	fonts               font.Declaration   // root module only; zero-value = none
+	site                *Site              // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
+	pwa                 *pwa.Config        // declarado por PWA(); nil = no declarado
+	artifactSources     []artifacts.Source // declarado por Artifacts(); solo el raíz
 	faviconFiles        []favicon.File
 	faviconMu           sync.RWMutex
 	fs                  FS
@@ -300,6 +307,19 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 		pwaConfig = a.PWA
 	}
 	c.pwa = pwaConfig
+
+	// 0.45 Artifacts(): solo el raíz puede declarar (D-PWA-15).
+	var artifactSources []artifacts.Source
+	for _, a := range all {
+		if a == nil || a.Artifacts == nil {
+			continue
+		}
+		if !a.IsRoot || artifactSources != nil {
+			return fmt.Err(msgArtifactsNonRoot(a.ModuleName))
+		}
+		artifactSources = a.Artifacts
+	}
+	c.artifactSources = artifactSources
 
 	// 0.5 Favicon(): solo el raíz puede declarar. Derivar y escribir el juego completo.
 	var faviconOwner string

@@ -50,6 +50,7 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 	var siteFrom string
 	var faviconFrom string
 	var pwaFrom string
+	var artifactsFrom string
 
 	for _, p := range paths {
 		out := results[p]
@@ -98,6 +99,14 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 			}
 			merged.PWA = out.PWA
 			pwaFrom = p
+		}
+		if out.Artifacts != nil {
+			if artifactsFrom != "" {
+				return CollectorOutput{}, false, fmt.Err("ssr: multiple Artifacts() declarations:",
+					artifactsFrom, "and", p, "— only one package per module may declare Artifacts()")
+			}
+			merged.Artifacts = out.Artifacts
+			artifactsFrom = p
 		}
 	}
 

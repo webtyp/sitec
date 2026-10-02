@@ -23,8 +23,13 @@ require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/tdewolff/parse/v2 v2.8.5 // indirect
 	golang.org/x/image v0.45.0 // indirect
+	webtyp.com/artifacts v0.1.1 // indirect
+	webtyp.com/await v0.1.2 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
+	webtyp.com/device v0.1.0 // indirect
+	webtyp.com/fetch v0.1.28 // indirect
+	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/json v0.5.27 // indirect
 	webtyp.com/model v0.1.9 // indirect
 )

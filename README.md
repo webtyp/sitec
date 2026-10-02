@@ -74,6 +74,21 @@ func (a *App) PWA() pwa.Config {
 
 En builds de producción (`ModeRelease`), `sitec` emite automáticamente `manifest.webmanifest`, inyecta los tags `<head>` y el script de registro del service worker, renombra los activos con su hash de contenido (`style.3f9a1c2b.css`) y genera `sw.js` con el manifiesto de precaché completo. En desarrollo (`ModeDev`), mantiene nombres fijos sin service worker.
 
+## Artefactos pesados
+
+Los archivos grandes que descarga el código del navegador (pesos de modelos, cachés) se declaran con `Artifacts()` en el paquete raíz (`!wasm`), junto a `Favicon()` y `PWA()`:
+
+```go
+//go:build !wasm
+
+func Artifacts() []artifacts.Source {
+	return []artifacts.Source{{ID: "decider-0.8b", Version: "q4-2026-09",
+		File: "models/decider.wtypw", Needs: device.Requirement{MinTier: device.TierSIMD}}}
+}
+```
+
+`sitec` mide cada archivo (tamaño y SHA-256, sin cargarlo en memoria), escribe `/artifacts.json` y, en `Build`, coloca cada archivo bajo `/artifacts/` con un enlace duro (o una copia por streaming). Nunca se empaquetan ni se precachean; `server/httpd` los sirve con `Cache-Control: no-store` (vía `pwa.CacheControl`). En desarrollo, las descargas se prueban tras un `Build` de release.
+
 ## Estado
 
 En construcción.

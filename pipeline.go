@@ -180,6 +180,7 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 		Site:        output.Site,
 		Favicon:     output.Favicon,
 		PWA:         output.PWA,
+		Artifacts:   output.Artifacts,
 		IsRoot:      target.path == rootModule.path,
 		IsFramework: isFrameworkModule(target.path),
 	}
@@ -233,6 +234,7 @@ func (e *Extractor) ExtractAll() ([]*Assets, error) {
 				Site:        output.Site,
 				Favicon:     output.Favicon,
 				PWA:         output.PWA,
+				Artifacts:   output.Artifacts,
 				IsRoot:      m.path == rootModule.path,
 				IsFramework: isFrameworkModule(m.path),
 			}

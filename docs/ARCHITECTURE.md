@@ -91,6 +91,14 @@ that program is compiled against whatever the target package actually returns.
 
 Preserving this property is a hard constraint on any change to detection.
 
+**One exception: `Artifacts()`.** The name is common (`min.Handler.Artifacts()`,
+`sitec.Output.Artifacts()` both exist), and matching it by name alone made every
+project that imports those packages fail to compile its extractor. Only
+`func() []artifacts.Source` (with `webtyp.com/artifacts` imported in that file)
+is the declaration. This costs nothing the rule protects: unlike the sprite,
+`sitec` consumes this value typed, so a change to its type touches `sitec`
+anyway.
+
 ---
 
 ## 4. Extraction model
@@ -179,12 +187,32 @@ func (a *App) PWA() pwa.Config {
 
 Only the root module of a project may declare `PWA()`. Declaring `PWA()` in a non-root module or without declaring `Favicon()` fails the build.
 
+### Large artifacts
+
+A project declares the large files its browser code downloads (model weights,
+caches) with `Artifacts() []artifacts.Source` in its root package (`!wasm`),
+next to `Favicon()` and `PWA()` (D-PWA-15):
+
+1. Extraction brings the sources to `Compiler.artifactSources` (root only).
+2. `artifacts.BuildManifest` measures each file — size and SHA-256, streamed,
+   never held in memory — and `/artifacts.json` is written into the shell
+   (precached like any shell file).
+3. `Build` places each file at its URL under `/artifacts/` with a hard link,
+   or a streamed copy when linking fails (`placeLargeFiles`). The files are
+   never an in-memory `Artifact` and never precached.
+4. `Output.LargeFiles()` lists URL → path on disk for deployers that upload
+   instead of writing to disk.
+
+The development daemon does not place them: an application tests its downloads
+after a release `Build`.
+
 ### Serving infrastructure cache headers
 
 When serving release artifacts, the serving layer should configure HTTP response headers as follows:
 
 - **Hashed assets** (`style.3f9a1c2b.css`, `script.816fa8ef.js`, `client.3f9a1c2b.wasm`): `Cache-Control: public, max-age=31536000, immutable`
 - **Shell and dynamic entry points** (`/`, `sw.js`, `manifest.webmanifest`): `Cache-Control: no-cache`
+- **Large artifacts** (`/artifacts/…`): `Cache-Control: no-store` — `artifacts` keeps them in OPFS itself
 
 ---
 

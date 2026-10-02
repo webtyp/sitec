@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"text/template"
 
+	"webtyp.com/artifacts"
 	"webtyp.com/fmt"
 	"webtyp.com/font"
 	"webtyp.com/html"
@@ -25,6 +26,8 @@ type CollectorOutput struct {
 	Site    *Site            `json:"site"`
 	Favicon *FaviconWire     `json:"favicon"`
 	PWA     *pwa.Config      `json:"pwa"`
+	// Artifacts are the large files declared by Artifacts(); root only.
+	Artifacts []artifacts.Source `json:"artifacts"`
 }
 
 // fontsWire is the JSON shape for a Declaration (unexported fields cannot marshal).
@@ -52,17 +55,18 @@ const (
 )
 
 type receiverFeature struct {
-	Name       string
-	HasRoot    bool
-	HasRender  bool
-	HasHTML    bool
-	HasJS      bool
-	HasIcons   bool
-	HasFonts   bool
-	HasPages   bool
-	HasSite    bool
-	HasFavicon bool
-	HasPWA     bool
+	Name         string
+	HasRoot      bool
+	HasRender    bool
+	HasHTML      bool
+	HasJS        bool
+	HasIcons     bool
+	HasFonts     bool
+	HasPages     bool
+	HasSite      bool
+	HasFavicon   bool
+	HasPWA       bool
+	HasArtifacts bool
 }
 
 type moduleAlias struct {
@@ -97,16 +101,17 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 	}
 
 	type rawCollectorOutput struct {
-		Root    string            `json:"root"`
-		Render  string            `json:"render"`
-		HTML    string            `json:"html"`
-		Scripts []ScriptOutput    `json:"scripts"`
-		Icons   []json.RawMessage `json:"icons"`
-		Fonts   fontsWire         `json:"fonts"`
-		Pages   []html.Page       `json:"pages"`
-		Site    *Site             `json:"site"`
-		Favicon *faviconWire      `json:"favicon"`
-		PWA     *pwa.Config       `json:"pwa"`
+		Root      string             `json:"root"`
+		Render    string             `json:"render"`
+		HTML      string             `json:"html"`
+		Scripts   []ScriptOutput     `json:"scripts"`
+		Icons     []json.RawMessage  `json:"icons"`
+		Fonts     fontsWire          `json:"fonts"`
+		Pages     []html.Page        `json:"pages"`
+		Site      *Site              `json:"site"`
+		Favicon   *faviconWire       `json:"favicon"`
+		PWA       *pwa.Config        `json:"pwa"`
+		Artifacts []artifacts.Source `json:"artifacts"`
 	}
 
 	// Parse the JSON output
@@ -140,16 +145,17 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 			fonts = font.Declare(font.Family(raw.Fonts.Family), raw.Fonts.Dir)
 		}
 		finalResults[pkg] = CollectorOutput{
-			Root:    raw.Root,
-			Render:  raw.Render,
-			HTML:    raw.HTML,
-			Scripts: raw.Scripts,
-			Icons:   mergedSprite,
-			Fonts:   fonts,
-			Pages:   raw.Pages,
-			Site:    raw.Site,
-			Favicon: raw.Favicon,
-			PWA:     raw.PWA,
+			Root:      raw.Root,
+			Render:    raw.Render,
+			HTML:      raw.HTML,
+			Scripts:   raw.Scripts,
+			Icons:     mergedSprite,
+			Fonts:     fonts,
+			Pages:     raw.Pages,
+			Site:      raw.Site,
+			Favicon:   raw.Favicon,
+			PWA:       raw.PWA,
+			Artifacts: raw.Artifacts,
 		}
 	}
 
@@ -169,6 +175,9 @@ import (
 	{{end}}
 	{{if .HasAnyPWA}}
 	"webtyp.com/pwa"
+	{{end}}
+	{{if .HasAnyArtifacts}}
+	"webtyp.com/artifacts"
 	{{end}}
 	{{range .Modules}}
 	{{if .HasAnyFeature}}{{.Alias}} "{{.Path}}"{{end}}
@@ -205,6 +214,7 @@ type ssr struct {
 	Site    *siteWire    ` + "`json:\"site\"`" + `
 	Favicon *faviconWire ` + "`json:\"favicon\"`" + `
 	{{if .HasAnyPWA}}PWA *pwa.Config ` + "`json:\"pwa\"`" + `{{end}}
+	{{if .HasAnyArtifacts}}Artifacts []artifacts.Source ` + "`json:\"artifacts\"`" + `{{end}}
 	{{if .HasAnyPages}}Pages []html.Page ` + "`json:\"pages\"`" + `{{end}}
 }
 
@@ -267,6 +277,7 @@ func main() {
 				s.PWA = &c
 			}
 			{{end}}
+			{{if .HasArtifacts}}s.Artifacts = inst.Artifacts(){{end}}
 			{{else}}
 			{{if .HasRoot}}s.Root += {{$alias}}.RootCSS().String(){{end}}
 			{{if .HasRender}}s.Render += {{$alias}}.RenderCSS().String(){{end}}
@@ -302,6 +313,7 @@ func main() {
 				s.PWA = &c
 			}
 			{{end}}
+			{{if .HasArtifacts}}s.Artifacts = {{$alias}}.Artifacts(){{end}}
 			{{end}}
 		}()
 		{{end}}
@@ -328,6 +340,7 @@ func main() {
 
 	hasAnyPages := false
 	hasAnyPWA := false
+	hasAnyArtifacts := false
 	for _, m := range aliases {
 		for _, r := range m.Receivers {
 			if r.HasPages {
@@ -336,17 +349,22 @@ func main() {
 			if r.HasPWA {
 				hasAnyPWA = true
 			}
+			if r.HasArtifacts {
+				hasAnyArtifacts = true
+			}
 		}
 	}
 
 	data := struct {
-		Modules     []moduleAlias
-		HasAnyPages bool
-		HasAnyPWA   bool
+		Modules         []moduleAlias
+		HasAnyPages     bool
+		HasAnyPWA       bool
+		HasAnyArtifacts bool
 	}{
-		Modules:     aliases,
-		HasAnyPages: hasAnyPages,
-		HasAnyPWA:   hasAnyPWA,
+		Modules:         aliases,
+		HasAnyPages:     hasAnyPages,
+		HasAnyPWA:       hasAnyPWA,
+		HasAnyArtifacts: hasAnyArtifacts,
 	}
 
 	f, err := os.Create(outputFile)

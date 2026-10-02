@@ -82,10 +82,17 @@ func (s *scanner) scanFile(path string) (fileFeatures, error) {
 	}
 
 	imports := make(map[string]bool)
+	artifactsName := "" // local name of webtyp.com/artifacts in this file; "" = not imported
 	for _, imp := range f.Imports {
 		if imp.Path != nil {
 			p := strings.Trim(imp.Path.Value, "\"")
 			imports[p] = true
+			if p == artifactsImport {
+				artifactsName = "artifacts"
+				if imp.Name != nil {
+					artifactsName = imp.Name.Name
+				}
+			}
 		}
 	}
 
@@ -101,6 +108,7 @@ func (s *scanner) scanFile(path string) (fileFeatures, error) {
 		"RenderSite":  true,
 		"Favicon":     true,
 		"PWA":         true,
+		"Artifacts":   true,
 	}
 
 	for _, decl := range f.Decls {
@@ -109,6 +117,11 @@ func (s *scanner) scanFile(path string) (fileFeatures, error) {
 			continue
 		}
 		if !producerNames[fn.Name.Name] {
+			continue
+		}
+		// Artifacts is a common method name (min.Handler, sitec.Output): only the declaration
+		// form func() []artifacts.Source is the producer.
+		if fn.Name.Name == "Artifacts" && !returnsArtifactSources(fn.Type, artifactsName) {
 			continue
 		}
 
@@ -259,4 +272,25 @@ func moduleSubpackagesUsed(modulePath string, moduleDir string, importedPaths ma
 	}
 
 	return usedSubpackages
+}
+
+const artifactsImport = "webtyp.com/artifacts"
+
+// returnsArtifactSources reports whether t is func() []<pkg>.Source, pkg being the file's local
+// name of webtyp.com/artifacts.
+func returnsArtifactSources(t *ast.FuncType, pkg string) bool {
+	if pkg == "" || (t.Params != nil && len(t.Params.List) > 0) || t.Results == nil ||
+		len(t.Results.List) != 1 || len(t.Results.List[0].Names) > 1 {
+		return false
+	}
+	arr, ok := t.Results.List[0].Type.(*ast.ArrayType)
+	if !ok || arr.Len != nil {
+		return false
+	}
+	sel, ok := arr.Elt.(*ast.SelectorExpr)
+	if !ok || sel.Sel.Name != "Source" {
+		return false
+	}
+	x, ok := sel.X.(*ast.Ident)
+	return ok && x.Name == pkg
 }

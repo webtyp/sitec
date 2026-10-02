@@ -1,10 +1,12 @@
 package sitec
 
 import (
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"webtyp.com/artifacts"
 	"webtyp.com/fmt"
 	"webtyp.com/image/min"
 	"webtyp.com/router/routescan"
@@ -13,6 +15,7 @@ import (
 const (
 	DefaultOutputDir    = "web/public"
 	DefaultImageQuality = 82
+	mediaTypeJSON       = "application/json"
 )
 
 // Mode decides what artifact Build produces.
@@ -143,6 +146,7 @@ type Output struct {
 	c      *Compiler
 	routes []routescan.Decl
 	arts   []Artifact
+	large  []artifacts.LocalFile
 }
 
 // Routes returns the routes the project declared in routes/routes.go, in
@@ -166,6 +170,15 @@ func (s *Output) Artifacts() []Artifact {
 		return nil
 	}
 	return s.c.List()
+}
+
+// LargeFiles returns the declared artifacts this build places under pwa.ArtifactsDir, with the
+// path of each on disk. They are never part of Artifacts(): they are too large to hold in memory.
+func (s *Output) LargeFiles() []artifacts.LocalFile {
+	if s == nil {
+		return nil
+	}
+	return s.large
 }
 
 // An artifact's Path is a URL ("/style.css", "/", "/acerca/") — the URL is
@@ -278,7 +291,48 @@ func Build(rootDir, outDir string, opts ...Option) error {
 		return err
 	}
 
-	return out.WriteTo(NewOsFS())
+	if err := out.WriteTo(NewOsFS()); err != nil {
+		return err
+	}
+	return placeLargeFiles(outPath, out.LargeFiles())
+}
+
+// linkFile is os.Link; a variable so a test can make linking fail.
+var linkFile = os.Link
+
+// placeLargeFiles puts each declared artifact at its URL under outPath: a hard link, or a streamed
+// copy when linking fails (another filesystem, Windows without the permission). Never read whole.
+func placeLargeFiles(outPath string, files []artifacts.LocalFile) error {
+	for _, f := range files {
+		dest := filepath.Join(outPath, filepath.FromSlash(strings.TrimPrefix(f.URL, "/")))
+		if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
+			return fmt.Errf("sitec: placing %s: %v", f.URL, err)
+		}
+		if linkFile(f.Path, dest) == nil {
+			continue
+		}
+		if err := copyFile(f.Path, dest); err != nil {
+			return fmt.Errf("sitec: placing %s: %v", f.URL, err)
+		}
+	}
+	return nil
+}
+
+func copyFile(src, dest string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.Create(dest)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 // BuildWithConfig executes the build pipeline with a custom BuildConfig and returns the Output in memory.
@@ -392,20 +446,38 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		return nil, err
 	}
 
+	// Artifacts(): the manifest joins the shell; the files are only measured here (streamed
+	// through SHA-256) and placed by Build, never held in memory (D-PWA-15).
+	var large []artifacts.LocalFile
+	if len(c.artifactSources) > 0 {
+		m, files, err := artifacts.BuildManifest(root, c.artifactSources)
+		if err != nil {
+			return nil, err
+		}
+		data, err := m.Encode()
+		if err != nil {
+			return nil, err
+		}
+		if err := c.Write(strings.TrimPrefix(artifacts.ManifestPath, "/"), data, mediaTypeJSON); err != nil {
+			return nil, err
+		}
+		large = files
+	}
+
 	routes, err := routescan.Scan(root)
 	if err != nil {
 		return nil, err
 	}
 
-	out := &Output{c: c, routes: routes}
+	out := &Output{c: c, routes: routes, large: large}
 
 	if cfg.Mode == ModeRelease {
 		arts, err := finalizeRelease(c.List(), releaseInput{
-			CSSURL:    c.mainStyleCssHandler.GetURLPath(),
-			JSURL:     c.mainJsHandler.GetURLPath(),
-			PWA:       c.pwa,
-			Favicons:  c.getFaviconFiles(),
-			Log:       c.log,
+			CSSURL:   c.mainStyleCssHandler.GetURLPath(),
+			JSURL:    c.mainJsHandler.GetURLPath(),
+			PWA:      c.pwa,
+			Favicons: c.getFaviconFiles(),
+			Log:      c.log,
 		})
 		if err != nil {
 			return nil, err
@@ -413,7 +485,11 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		out.arts = arts
 	}
 
-	if err := checkRouteCollisions(routes, out.Artifacts()); err != nil {
+	served := out.Artifacts()
+	for _, f := range large {
+		served = append(served, Artifact{Path: f.URL})
+	}
+	if err := checkRouteCollisions(routes, served); err != nil {
 		return nil, err
 	}
 
