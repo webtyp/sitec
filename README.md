@@ -89,6 +89,27 @@ func ArtifactSources() []artifacts.Source {
 
 `sitec` mide cada archivo (tamaño y SHA-256, sin cargarlo en memoria), escribe `/artifacts.json` y, en `Build`, coloca cada archivo bajo `/artifacts/` con un enlace duro (o una copia por streaming). Nunca se empaquetan ni se precachean; `server/httpd` los sirve con `Cache-Control: no-store` (vía `pwa.CacheControl`). En desarrollo, las descargas se prueban tras un `Build` de release.
 
+## Web Workers
+
+El código pesado (modelos, inferencia) se extrae del hilo principal. Una convención de directorios registra los workers: cualquier subdirectorio bajo `web/workers/` que contenga un `main.go` se compila. El nombre del subdirectorio es el nombre del worker (ej. `web/workers/echo/main.go` → worker `echo`).
+
+En release, `sitec` compila cada worker dos veces:
+1. Una versión **SIMD** (TinyGo `+simd128`, `-opt=2`) para navegadores modernos, que duplica el rendimiento de los modelos (D16).
+2. Una versión **plana** (`-opt=2`) como fallback.
+
+Produce cuatro archivos por worker:
+- El script arrancador: `<name>.worker.js` (apunta a la versión plana).
+- El script arrancador SIMD: `<name>.simd.worker.js` (apunta a la versión SIMD).
+- Los binarios WASM hasheados: `<name>.<hash>.wasm` y `<name>.simd.<hash>.wasm`.
+
+La aplicación lo arranca así en su código de página:
+```go
+agentworker.Start(Scripts{
+    Plain: "/echo.worker.js",
+    SIMD:  "/echo.simd.worker.js",
+}, ...)
+```
+
 ## Estado
 
 En construcción.

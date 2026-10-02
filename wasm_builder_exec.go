@@ -24,6 +24,14 @@ type WasmBuildOptions struct {
 	// OutputName is the artifact name without the .wasm extension.
 	// Empty means "client".
 	OutputName string
+
+	// SIMD builds with TinyGo +simd128 and -opt=2 (Web Workers that run models).
+	SIMD bool
+	// Speed builds with -opt=2 (Web Workers are compiled for speed, pages for size).
+	// SIMD implies Speed.
+	Speed bool
+	// HashName hashes the content and uses it in the output name.
+	HashName bool
 }
 
 func (o WasmBuildOptions) entry() string {
@@ -57,8 +65,12 @@ func NewDefaultWasmBuilder(devMode bool) WasmBuilder {
 // compiling a site frontend. The output keeps its fixed name (e.g. an edge Worker binary that a
 // deploy config references by name): only the page binary is content-hashed.
 func NewWasmBuilder(stdlib bool, opts WasmBuildOptions) WasmBuilder {
-	return &defaultWasmBuilder{stdlib: stdlib, opts: opts}
+	return &defaultWasmBuilder{hashName: opts.HashName, stdlib: stdlib, opts: opts}
 }
+
+const simdTargetJSON = `{"inherits":["wasm"],"features":"+bulk-memory,+bulk-memory-opt,+call-indirect-overlong,+mutable-globals,+nontrapping-fptoint,+sign-ext,-multivalue,-reference-types,+simd128","cflags":["-msimd128"]}`
+
+var execCommand = exec.Command
 
 func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	entry := w.opts.entry()
@@ -100,13 +112,29 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	// tenga archivos hermanos (ej: main.go y access.go).
 	var cmd *exec.Cmd
 	if !w.stdlib {
+		args := []string{"build"}
+
+		if w.opts.SIMD {
+			targetPath := filepath.Join(tmpOutDir, "wasm-simd.json")
+			if err := os.WriteFile(targetPath, []byte(simdTargetJSON), 0644); err != nil {
+				return WasmOutput{}, err
+			}
+			args = append(args, "-target", targetPath, "-opt=2")
+		} else {
+			args = append(args, "-target", "wasm")
+			if w.opts.Speed {
+				args = append(args, "-opt=2")
+			}
+		}
+
 		// -no-debug: a shipped web binary is never a source-level debug
 		// target — DWARF info alone is the difference between ~99 KiB and
 		// ~456 KiB for a minimal client, which is most of a size budget spent
 		// on symbols nobody attaches a debugger to.
-		cmd = exec.Command("tinygo", "build", "-target", "wasm", "-no-debug", "-o", tmpOutPath, ".")
+		args = append(args, "-no-debug", "-o", tmpOutPath, ".")
+		cmd = execCommand("tinygo", args...)
 	} else {
-		cmd = exec.Command("go", "build", "-o", tmpOutPath, ".")
+		cmd = execCommand("go", "build", "-o", tmpOutPath, ".")
 	}
 	cmd.Dir = pkgDir
 	cmd.Env = env

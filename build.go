@@ -422,6 +422,10 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		}
 	}
 
+	if err := buildWorkers(root, c, cfg.Mode == ModeDev); err != nil {
+		return nil, err
+	}
+
 	if err := c.RouteExtractedAssets(all); err != nil {
 		return nil, err
 	}
