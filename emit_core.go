@@ -89,7 +89,7 @@ func msgPWANonRoot(moduleName string) string {
 
 func msgArtifactsNonRoot(moduleName string) string {
 	return lang.Translate(msgPrefix, "only", "the", "root", "module", "may", "declare",
-		"Artifacts();", "it", "is", "declared", "by", moduleName).String()
+		"ArtifactSources();", "it", "is", "declared", "by", moduleName).String()
 }
 
 func msgPWAWithoutFavicon() string {
@@ -135,7 +135,7 @@ type Compiler struct {
 	fonts               font.Declaration   // root module only; zero-value = none
 	site                *Site              // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
 	pwa                 *pwa.Config        // declarado por PWA(); nil = no declarado
-	artifactSources     []artifacts.Source // declarado por Artifacts(); solo el raíz
+	artifactSources     []artifacts.Source // declarado por ArtifactSources(); solo el raíz
 	faviconFiles        []favicon.File
 	faviconMu           sync.RWMutex
 	fs                  FS
@@ -308,16 +308,16 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 	}
 	c.pwa = pwaConfig
 
-	// 0.45 Artifacts(): solo el raíz puede declarar (D-PWA-15).
+	// 0.45 ArtifactSources(): solo el raíz puede declarar (D-PWA-15).
 	var artifactSources []artifacts.Source
 	for _, a := range all {
-		if a == nil || a.Artifacts == nil {
+		if a == nil || a.ArtifactSources == nil {
 			continue
 		}
 		if !a.IsRoot || artifactSources != nil {
 			return fmt.Err(msgArtifactsNonRoot(a.ModuleName))
 		}
-		artifactSources = a.Artifacts
+		artifactSources = a.ArtifactSources
 	}
 	c.artifactSources = artifactSources
 

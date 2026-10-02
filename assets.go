@@ -18,20 +18,20 @@ import (
 // import the minifier, and with it an HTTP router and a terminal UI, just to
 // name its own result.
 type Assets struct {
-	ModuleName  string
-	RootCSS     string
-	CSS         string
-	JS          []*js.Script
-	HTML        string
-	Icons       *sprite.Sprite
-	Fonts       font.Declaration // family declared by the module; zero value = none
-	Pages       []html.Page
-	Site        *Site              // declarado por RenderSite(); solo el raíz puede; nil = no declarado
-	Favicon     *FaviconWire       // declarado por Favicon(); solo el raíz puede; nil = no declarado
-	PWA         *pwa.Config        // declared by PWA(); root only; nil = not declared
-	Artifacts   []artifacts.Source // declared by Artifacts(); root only; placed under pwa.ArtifactsDir, never in memory
-	IsRoot      bool
-	IsFramework bool
+	ModuleName      string
+	RootCSS         string
+	CSS             string
+	JS              []*js.Script
+	HTML            string
+	Icons           *sprite.Sprite
+	Fonts           font.Declaration // family declared by the module; zero value = none
+	Pages           []html.Page
+	Site            *Site              // declarado por RenderSite(); solo el raíz puede; nil = no declarado
+	Favicon         *FaviconWire       // declarado por Favicon(); solo el raíz puede; nil = no declarado
+	PWA             *pwa.Config        // declared by PWA(); root only; nil = not declared
+	ArtifactSources []artifacts.Source // declared by ArtifactSources(); root only; placed under pwa.ArtifactsDir, never in memory
+	IsRoot          bool
+	IsFramework     bool
 }
 
 // FS es el sumidero de la etapa emit. memFS no toca disco; osFS escribe.

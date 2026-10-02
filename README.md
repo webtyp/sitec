@@ -76,12 +76,12 @@ En builds de producción (`ModeRelease`), `sitec` emite automáticamente `manife
 
 ## Artefactos pesados
 
-Los archivos grandes que descarga el código del navegador (pesos de modelos, cachés) se declaran con `Artifacts()` en el paquete raíz (`!wasm`), junto a `Favicon()` y `PWA()`:
+Los archivos grandes que descarga el código del navegador (pesos de modelos, cachés) se declaran con `ArtifactSources()` en el paquete raíz (`!wasm`), junto a `Favicon()` y `PWA()`:
 
 ```go
 //go:build !wasm
 
-func Artifacts() []artifacts.Source {
+func ArtifactSources() []artifacts.Source {
 	return []artifacts.Source{{ID: "decider-0.8b", Version: "q4-2026-09",
 		File: "models/decider.wtypw", Needs: device.Requirement{MinTier: device.TierSIMD}}}
 }

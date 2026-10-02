@@ -6,8 +6,9 @@ REVIEWER: none
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
 >
-> **ON HOLD — rename to `docs/PLAN.md` to dispatch, once the `Artifacts()` plan (dispatched
-> 2026-10-01) is merged.** Re-check the symbols below against the published tags first.
+> **READY — rename to `docs/PLAN.md` to dispatch.** Its prerequisite shipped: `ArtifactSources()`
+> in sitec v0.2.42 (the producer was renamed from `Artifacts()`, a name already declared by
+> `min.Handler` and `Output`). Re-check the symbols below against the published tags first.
 
 # Plan — `sitec`: Web Worker binaries, plain and SIMD
 

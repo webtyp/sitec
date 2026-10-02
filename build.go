@@ -446,7 +446,7 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		return nil, err
 	}
 
-	// Artifacts(): the manifest joins the shell; the files are only measured here (streamed
+	// ArtifactSources(): the manifest joins the shell; the files are only measured here (streamed
 	// through SHA-256) and placed by Build, never held in memory (D-PWA-15).
 	var large []artifacts.LocalFile
 	if len(c.artifactSources) > 0 {

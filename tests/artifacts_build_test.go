@@ -20,7 +20,7 @@ import (
 
 const artifactsModelPath = "models/decider.wtypw"
 
-// writeArtifactsApp writes a project whose root declares Artifacts() with one 3 MiB file (created
+// writeArtifactsApp writes a project whose root declares ArtifactSources() with one 3 MiB file (created
 // unless missing is true). withPWA also declares Favicon() and PWA(). Returns the file's bytes.
 func writeArtifactsApp(t *testing.T, appDir string, withPWA, missing bool) []byte {
 	t.Helper()
@@ -61,7 +61,7 @@ import (
 	"webtyp.com/device"
 )
 
-func Artifacts() []artifacts.Source {
+func ArtifactSources() []artifacts.Source {
 	return []artifacts.Source{{ID: "decider-0.8b", Version: "q4-2026-09",
 		File: "`+artifactsModelPath+`", Needs: device.Requirement{MinTier: device.TierSIMD}}}
 }
@@ -271,7 +271,7 @@ import (
 )
 
 type Widget struct{}
-func (w *Widget) Artifacts() []artifacts.Source { return []artifacts.Source{{ID: "x", Version: "1", File: "x.bin"}} }
+func (w *Widget) ArtifactSources() []artifacts.Source { return []artifacts.Source{{ID: "x", Version: "1", File: "x.bin"}} }
 func (w *Widget) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 `)
 	for _, dir := range []string{libDir, appDir} {
@@ -284,17 +284,18 @@ func (w *Widget) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 
 	_, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
 	if err == nil {
-		t.Fatal("expected an error when a non-root module declares Artifacts()")
+		t.Fatal("expected an error when a non-root module declares ArtifactSources()")
 	}
-	if !strings.Contains(err.Error(), "only the root module") || !strings.Contains(err.Error(), "Artifacts()") ||
+	if !strings.Contains(err.Error(), "only the root module") || !strings.Contains(err.Error(), "ArtifactSources()") ||
 		!strings.Contains(err.Error(), "example.com/widget") {
 		t.Errorf("got %v, want msgArtifactsNonRoot naming example.com/widget", err)
 	}
 }
 
-// A method named Artifacts with another signature (min.Handler, sitec.Output have one) is not the
-// declaration: the build must not try to call it as one.
-func TestArtifacts_OtherSignatureIsNotAProducer(t *testing.T) {
+// Producers are matched by name only (docs/ARCHITECTURE.md §3.1), so their names must be unique in
+// the ecosystem: Artifacts() is declared by min.Handler and sitec.Output, and a project declaring one
+// must not have it called as the declaration.
+func TestArtifacts_CommonNameIsNotAProducer(t *testing.T) {
 	wcwd, _ := os.Getwd()
 	appDir := t.TempDir()
 	write := func(p, c string) {

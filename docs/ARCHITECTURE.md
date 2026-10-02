@@ -91,13 +91,12 @@ that program is compiled against whatever the target package actually returns.
 
 Preserving this property is a hard constraint on any change to detection.
 
-**One exception: `Artifacts()`.** The name is common (`min.Handler.Artifacts()`,
-`sitec.Output.Artifacts()` both exist), and matching it by name alone made every
-project that imports those packages fail to compile its extractor. Only
-`func() []artifacts.Source` (with `webtyp.com/artifacts` imported in that file)
-is the declaration. This costs nothing the rule protects: unlike the sprite,
-`sitec` consumes this value typed, so a change to its type touches `sitec`
-anyway.
+The price of matching by name is that **a producer's name must be unique in the
+ecosystem**: any scanned package declaring a method or function with that name
+is called as a producer. Before adding one, grep every `webtyp.com/*` module for
+the name. `Artifacts` failed this test (`min.Handler.Artifacts()`,
+`sitec.Output.Artifacts()`), so the large-artifacts producer is
+`ArtifactSources()`; `TestArtifacts_CommonNameIsNotAProducer` keeps it that way.
 
 ---
 
@@ -190,7 +189,7 @@ Only the root module of a project may declare `PWA()`. Declaring `PWA()` in a no
 ### Large artifacts
 
 A project declares the large files its browser code downloads (model weights,
-caches) with `Artifacts() []artifacts.Source` in its root package (`!wasm`),
+caches) with `ArtifactSources() []artifacts.Source` in its root package (`!wasm`),
 next to `Favicon()` and `PWA()` (D-PWA-15):
 
 1. Extraction brings the sources to `Compiler.artifactSources` (root only).

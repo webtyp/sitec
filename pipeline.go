@@ -169,20 +169,20 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 
 	rootModule := resolveOwningModule(e.rootDir, modules)
 	a := &Assets{
-		ModuleName:  target.path,
-		RootCSS:     output.Root,
-		CSS:         output.Render,
-		JS:          scripts,
-		HTML:        output.HTML,
-		Icons:       output.Icons,
-		Fonts:       output.Fonts,
-		Pages:       output.Pages,
-		Site:        output.Site,
-		Favicon:     output.Favicon,
-		PWA:         output.PWA,
-		Artifacts:   output.Artifacts,
-		IsRoot:      target.path == rootModule.path,
-		IsFramework: isFrameworkModule(target.path),
+		ModuleName:      target.path,
+		RootCSS:         output.Root,
+		CSS:             output.Render,
+		JS:              scripts,
+		HTML:            output.HTML,
+		Icons:           output.Icons,
+		Fonts:           output.Fonts,
+		Pages:           output.Pages,
+		Site:            output.Site,
+		Favicon:         output.Favicon,
+		PWA:             output.PWA,
+		ArtifactSources: output.ArtifactSources,
+		IsRoot:          target.path == rootModule.path,
+		IsFramework:     isFrameworkModule(target.path),
 	}
 	return a, nil
 }
@@ -223,20 +223,20 @@ func (e *Extractor) ExtractAll() ([]*Assets, error) {
 				})
 			}
 			a := &Assets{
-				ModuleName:  m.path,
-				RootCSS:     output.Root,
-				CSS:         output.Render,
-				JS:          scripts,
-				HTML:        output.HTML,
-				Icons:       output.Icons,
-				Fonts:       output.Fonts,
-				Pages:       output.Pages,
-				Site:        output.Site,
-				Favicon:     output.Favicon,
-				PWA:         output.PWA,
-				Artifacts:   output.Artifacts,
-				IsRoot:      m.path == rootModule.path,
-				IsFramework: isFrameworkModule(m.path),
+				ModuleName:      m.path,
+				RootCSS:         output.Root,
+				CSS:             output.Render,
+				JS:              scripts,
+				HTML:            output.HTML,
+				Icons:           output.Icons,
+				Fonts:           output.Fonts,
+				Pages:           output.Pages,
+				Site:            output.Site,
+				Favicon:         output.Favicon,
+				PWA:             output.PWA,
+				ArtifactSources: output.ArtifactSources,
+				IsRoot:          m.path == rootModule.path,
+				IsFramework:     isFrameworkModule(m.path),
 			}
 			all = append(all, a)
 		}

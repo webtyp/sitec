@@ -100,12 +100,12 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 			merged.PWA = out.PWA
 			pwaFrom = p
 		}
-		if out.Artifacts != nil {
+		if out.ArtifactSources != nil {
 			if artifactsFrom != "" {
-				return CollectorOutput{}, false, fmt.Err("ssr: multiple Artifacts() declarations:",
-					artifactsFrom, "and", p, "— only one package per module may declare Artifacts()")
+				return CollectorOutput{}, false, fmt.Err("ssr: multiple ArtifactSources() declarations:",
+					artifactsFrom, "and", p, "— only one package per module may declare ArtifactSources()")
 			}
-			merged.Artifacts = out.Artifacts
+			merged.ArtifactSources = out.ArtifactSources
 			artifactsFrom = p
 		}
 	}
