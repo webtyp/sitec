@@ -2,8 +2,6 @@
 PLAN: "feat: Artifacts() — sitec writes /artifacts.json and places the declared large files under /artifacts/"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
-SESSION: 13794862147931110920
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
