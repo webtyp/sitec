@@ -136,6 +136,8 @@ type Compiler struct {
 	site                *Site              // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
 	pwa                 *pwa.Config        // declarado por PWA(); nil = no declarado
 	artifactSources     []artifacts.Source // declarado por ArtifactSources(); solo el raíz
+	large               []artifacts.LocalFile // los archivos de artifactSources: URL → ruta en disco
+	largeKey            string                // tamaño y fecha de cada archivo al medirlos (large.go)
 	faviconFiles        []favicon.File
 	faviconMu           sync.RWMutex
 	fs                  FS
@@ -320,6 +322,9 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 		artifactSources = a.ArtifactSources
 	}
 	c.artifactSources = artifactSources
+	if err := c.emitArtifacts(); err != nil {
+		return err
+	}
 
 	// 0.5 Favicon(): solo el raíz puede declarar. Derivar y escribir el juego completo.
 	var faviconOwner string
@@ -791,27 +796,38 @@ func (c *Compiler) Read(p string) ([]byte, string, bool) {
 // the file written to disk at 0 bytes.
 func (c *Compiler) Write(outPath string, content []byte, mediatype string) error {
 	c.mu.Lock()
-	fs := c.fs
+	fs, fullPath := c.recordWrite(outPath, content, mediatype)
+	c.mu.Unlock()
+	return writeTo(fs, outPath, fullPath, content, mediatype)
+}
+
+// writeLocked is Write for code that already holds c.mu (RouteExtractedAssets).
+func (c *Compiler) writeLocked(outPath string, content []byte, mediatype string) error {
+	fs, fullPath := c.recordWrite(outPath, content, mediatype)
+	return writeTo(fs, outPath, fullPath, content, mediatype)
+}
+
+// recordWrite registers a direct artifact and resolves where it goes; c.mu must be held.
+func (c *Compiler) recordWrite(outPath string, content []byte, mediatype string) (FS, string) {
 	outputDir := ""
 	if c.Config != nil {
 		outputDir = c.Config.OutputDir
 	}
-
-	urlKey := path.Join("/", outPath)
 	c.directArtifacts = append(c.directArtifacts, Artifact{
-		Path:      urlKey,
+		Path:      path.Join("/", outPath),
 		Mediatype: mediatype,
 		Content:   content,
 	})
-	c.mu.Unlock()
-
-	if fs == nil {
-		return fmt.Err("Write", outPath, ": no FS configured")
-	}
-
 	fullPath := outPath
 	if outputDir != "" && !filepath.IsAbs(outPath) {
 		fullPath = filepath.Join(outputDir, outPath)
+	}
+	return c.fs, fullPath
+}
+
+func writeTo(fs FS, outPath, fullPath string, content []byte, mediatype string) error {
+	if fs == nil {
+		return fmt.Err("Write", outPath, ": no FS configured")
 	}
 	return fs.Write(fullPath, content, mediatype)
 }

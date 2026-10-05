@@ -9,110 +9,90 @@ import (
 	"webtyp.com/js"
 )
 
-const workersDir = "web/workers"
+// WorkersDir holds the project's Web Workers: every web/workers/<name>/main.go is one.
+const WorkersDir = "web/workers"
 
 var workerNameRe = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
 
-func buildWorkers(root string, c *Compiler, devMode bool) error {
-	wDir := filepath.Join(root, workersDir)
-	entries, err := os.ReadDir(wDir)
+const mediaTypeWasm = "application/wasm"
+
+// WorkerNames returns the names of the project's Workers (directories under WorkersDir with a
+// main.go), or an error naming a directory that is not a valid name.
+func WorkerNames(root string) ([]string, error) {
+	entries, err := os.ReadDir(filepath.Join(root, WorkersDir))
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return nil, nil
 		}
-		return err
+		return nil, err
 	}
-
+	var names []string
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
 		}
 		name := entry.Name()
 		if !workerNameRe.MatchString(name) {
-			return fmt.Errf("sitec: worker directory %q: use lowercase letters, digits and dashes", name)
+			return nil, fmt.Errf("sitec: worker directory %q: use lowercase letters, digits and dashes", name)
 		}
-
-		mainGo := filepath.Join(wDir, name, "main.go")
-		if _, err := os.Stat(mainGo); err != nil {
+		if _, err := os.Stat(filepath.Join(root, WorkersDir, name, "main.go")); err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
-			return err
+			return nil, err
 		}
+		names = append(names, name)
+	}
+	return names, nil
+}
 
-		entryPath := filepath.Join(workersDir, name, "main.go")
+// BuildWorkers builds every Worker of the project into the Compiler's FS: in release twice, plain
+// and SIMD, with content-hashed names; in development once, with TinyGo, the SIMD target and
+// -opt=2, as <name>.wasm, both scripts pointing to it (a Worker runs heavy code such as a model,
+// which Go's WebAssembly runs several times slower; development machines have SIMD).
+func (c *Compiler) BuildWorkers() error {
+	return buildWorkers(c.RootDir, c, c.DevMode)
+}
 
+func buildWorkers(root string, c *Compiler, devMode bool) error {
+	names, err := WorkerNames(root)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		entry := filepath.Join(WorkersDir, name, "main.go")
+		var plain, simd string
 		if devMode {
-			opts := WasmBuildOptions{
-				Entry:      entryPath,
-				OutputName: name,
-				Speed:      true,
-				HashName:   false,
-			}
-			builder := NewWasmBuilder(true, opts)
-			out, err := builder.Build(root)
+			out, err := buildWorker(root, c, WasmBuildOptions{Entry: entry, OutputName: name, SIMD: true, Speed: true})
 			if err != nil {
 				return err
 			}
-
-			if err := c.Write(out.Filename, out.Binary, "application/wasm"); err != nil {
-				return err
-			}
-
-			plainScript := js.WebWorker(name+".worker.js", "/"+out.Filename)
-			simdScript := js.WebWorker(name+".simd.worker.js", "/"+out.Filename)
-
-			if err := c.Write(plainScript.Name, []byte(plainScript.Content), "text/javascript"); err != nil {
-				return err
-			}
-			if err := c.Write(simdScript.Name, []byte(simdScript.Content), "text/javascript"); err != nil {
-				return err
-			}
+			plain, simd = out, out
 		} else {
-			// Plain build
-			plainOpts := WasmBuildOptions{
-				Entry:      entryPath,
-				OutputName: name,
-				Speed:      true,
-				HashName:   true,
-			}
-			plainBuilder := NewWasmBuilder(false, plainOpts)
-			plainOut, err := plainBuilder.Build(root)
-			if err != nil {
+			if plain, err = buildWorker(root, c, WasmBuildOptions{Entry: entry, OutputName: name, Speed: true, HashName: true}); err != nil {
 				return err
 			}
-			if err := c.Write(plainOut.Filename, plainOut.Binary, "application/wasm"); err != nil {
+			if simd, err = buildWorker(root, c, WasmBuildOptions{Entry: entry, OutputName: name + ".simd", SIMD: true, Speed: true, HashName: true}); err != nil {
 				return err
 			}
-
-			// SIMD build
-			simdOpts := WasmBuildOptions{
-				Entry:      entryPath,
-				OutputName: name + ".simd",
-				SIMD:       true,
-				Speed:      true,
-				HashName:   true,
-			}
-			simdBuilder := NewWasmBuilder(false, simdOpts)
-			simdOut, err := simdBuilder.Build(root)
-			if err != nil {
-				return err
-			}
-			if err := c.Write(simdOut.Filename, simdOut.Binary, "application/wasm"); err != nil {
-				return err
-			}
-
-			plainScript := js.WebWorker(name+".worker.js", "/"+plainOut.Filename)
-			simdScript := js.WebWorker(name+".simd.worker.js", "/"+simdOut.Filename)
-
-			if err := c.Write(plainScript.Name, []byte(plainScript.Content), "text/javascript"); err != nil {
-				return err
-			}
-			if err := c.Write(simdScript.Name, []byte(simdScript.Content), "text/javascript"); err != nil {
+		}
+		for _, s := range []*js.Script{
+			js.WebWorker(name+".worker.js", "/"+plain),
+			js.WebWorker(name+".simd.worker.js", "/"+simd),
+		} {
+			if err := c.Write(s.Name, []byte(s.Content), "text/javascript"); err != nil {
 				return err
 			}
 		}
 	}
-
 	return nil
+}
+
+// buildWorker compiles one Worker binary with TinyGo, writes it and returns its file name.
+func buildWorker(root string, c *Compiler, opts WasmBuildOptions) (string, error) {
+	out, err := NewWasmBuilder(false, opts).Build(root)
+	if err != nil {
+		return "", err
+	}
+	return out.Filename, c.Write(out.Filename, out.Binary, mediaTypeWasm)
 }
