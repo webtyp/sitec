@@ -52,3 +52,40 @@ func TestWorkers_SIMDBinaryUsesSIMDTarget(t *testing.T) {
 		t.Errorf("tinygo args lack -opt=2: %v", args)
 	}
 }
+
+// In development a Worker is built once, with TinyGo, the SIMD target and -opt=2 — never with Go.
+func TestWorkers_DevBuildsTinyGoSIMDOnce(t *testing.T) {
+	orig := execCommand
+	t.Cleanup(func() { execCommand = orig })
+	var tools []string
+	var target string
+	execCommand = func(name string, arg ...string) *exec.Cmd {
+		tools = append(tools, name)
+		for i, a := range arg {
+			if a == "-target" && i+1 < len(arg) {
+				data, _ := os.ReadFile(arg[i+1])
+				target = string(data)
+			}
+		}
+		return exec.Command("true")
+	}
+
+	root := t.TempDir()
+	entry := filepath.Join(root, WorkersDir, "echo", "main.go")
+	if err := os.MkdirAll(filepath.Dir(entry), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(entry, []byte("package main\nfunc main() {}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	c := NewCompiler(&Config{RootDir: root, DevMode: true})
+	c.SetFS(NewMemFS())
+	_ = c.BuildWorkers() // the stub writes no binary: only the commands matter
+
+	if len(tools) != 1 || tools[0] != "tinygo" {
+		t.Fatalf("commands = %v, want one tinygo build", tools)
+	}
+	if !strings.Contains(target, "+simd128") {
+		t.Errorf("dev worker target = %q, want simd128", target)
+	}
+}

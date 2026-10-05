@@ -422,7 +422,7 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		}
 	}
 
-	if err := buildWorkers(root, c, cfg.Mode == ModeDev); err != nil {
+	if err := c.BuildWorkers(); err != nil {
 		return nil, err
 	}
 
@@ -450,23 +450,9 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		return nil, err
 	}
 
-	// ArtifactSources(): the manifest joins the shell; the files are only measured here (streamed
-	// through SHA-256) and placed by Build, never held in memory (D-PWA-15).
-	var large []artifacts.LocalFile
-	if len(c.artifactSources) > 0 {
-		m, files, err := artifacts.BuildManifest(root, c.artifactSources)
-		if err != nil {
-			return nil, err
-		}
-		data, err := m.Encode()
-		if err != nil {
-			return nil, err
-		}
-		if err := c.Write(strings.TrimPrefix(artifacts.ManifestPath, "/"), data, mediaTypeJSON); err != nil {
-			return nil, err
-		}
-		large = files
-	}
+	// ArtifactSources(): RouteExtractedAssets already wrote /artifacts.json; the files are placed
+	// by Build, never held in memory (D-PWA-15).
+	large := c.LargeFiles()
 
 	routes, err := routescan.Scan(root)
 	if err != nil {

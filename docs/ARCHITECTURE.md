@@ -202,8 +202,10 @@ next to `Favicon()` and `PWA()` (D-PWA-15):
 4. `Output.LargeFiles()` lists URL → path on disk for deployers that upload
    instead of writing to disk.
 
-The development daemon does not place them: an application tests its downloads
-after a release `Build`.
+In development the daemon's `Compiler` writes `/artifacts.json` the same way (at the end of
+`RouteExtractedAssets`, measured again only when a declared file changes size or date) and
+`sitec/serve` streams each declared file from where it is on disk (`LargeFile`), with Range and
+`Cache-Control: no-store`: nothing is copied into the output.
 
 ### Web Workers
 
@@ -219,9 +221,10 @@ This produces four artifacts per worker:
 - Two JavaScript bootstraps (static names, revalidated): `<name>.worker.js` and `<name>.simd.worker.js`.
 - Two WebAssembly binaries (content-hashed names, immutable): `<name>.<hash>.wasm` and `<name>.simd.<hash>.wasm`.
 
-In development (`ModeDev`) each worker is built once, plain, with the Go toolchain, as
-`<name>.wasm`; both scripts point to it. The development daemon (`Compiler` without `Build`) does
-not build workers yet: run a `Build` to try them.
+In development (`ModeDev`, and the daemon through `Compiler.BuildWorkers`) each worker is built
+once, with TinyGo, the SIMD target and `-opt=2`, as `<name>.wasm`; both scripts point to it. A
+Worker runs heavy code (a model), which Go's WebAssembly runs several times slower, and development
+machines have SIMD. `WorkerNames(root)` lists the workers, for a caller that watches them.
 
 The page code instantiates the worker by giving the manager both script URLs. The manager uses browser capability detection (`wasm-feature-detect` conceptually) to choose the right one:
 ```go

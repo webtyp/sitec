@@ -87,7 +87,7 @@ func ArtifactSources() []artifacts.Source {
 }
 ```
 
-`sitec` mide cada archivo (tamaño y SHA-256, sin cargarlo en memoria), escribe `/artifacts.json` y, en `Build`, coloca cada archivo bajo `/artifacts/` con un enlace duro (o una copia por streaming). Nunca se empaquetan ni se precachean; `server/httpd` los sirve con `Cache-Control: no-store` (vía `pwa.CacheControl`). En desarrollo, las descargas se prueban tras un `Build` de release.
+`sitec` mide cada archivo (tamaño y SHA-256, sin cargarlo en memoria), escribe `/artifacts.json` y, en `Build`, coloca cada archivo bajo `/artifacts/` con un enlace duro (o una copia por streaming). Nunca se empaquetan ni se precachean; `server/httpd` los sirve con `Cache-Control: no-store` (vía `pwa.CacheControl`). En desarrollo (`webtyp dev`) el `Compiler` escribe el mismo `/artifacts.json` y `sitec/serve` entrega cada archivo desde donde está, con Range, sin copiarlo.
 
 ## Web Workers
 
@@ -96,6 +96,8 @@ El código pesado (modelos, inferencia) se extrae del hilo principal. Una conven
 En release, `sitec` compila cada worker dos veces:
 1. Una versión **SIMD** (TinyGo `+simd128`, `-opt=2`) para navegadores modernos, que duplica el rendimiento de los modelos (D16).
 2. Una versión **plana** (`-opt=2`) como fallback.
+
+En desarrollo (`webtyp dev`, vía `Compiler.BuildWorkers`) cada worker se compila una sola vez con TinyGo, SIMD y `-opt=2` como `<name>.wasm`, y los dos scripts lo cargan.
 
 Produce cuatro archivos por worker:
 - El script arrancador: `<name>.worker.js` (apunta a la versión plana).
