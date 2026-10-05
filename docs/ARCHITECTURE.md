@@ -205,6 +205,32 @@ next to `Favicon()` and `PWA()` (D-PWA-15):
 The development daemon does not place them: an application tests its downloads
 after a release `Build`.
 
+### Web Workers
+
+Heavy workloads (like ML inference, D16) should run off the main thread to preserve UI framerates. SIMD execution for these models gives a ~2× end-to-end performance boost, but not all browsers support it yet.
+
+A project defines Workers by placing `main.go` inside direct subdirectories of `web/workers/`. For example, `web/workers/echo/main.go` declares a worker named `echo`.
+
+In release mode, `sitec` compiles each worker twice:
+1. A **SIMD** version (TinyGo `+simd128`, `-opt=2`) for modern browsers.
+2. A **plain** version (`-opt=2`) for legacy support.
+
+This produces four artifacts per worker:
+- Two JavaScript bootstraps (static names, revalidated): `<name>.worker.js` and `<name>.simd.worker.js`.
+- Two WebAssembly binaries (content-hashed names, immutable): `<name>.<hash>.wasm` and `<name>.simd.<hash>.wasm`.
+
+In development (`ModeDev`) each worker is built once, plain, with the Go toolchain, as
+`<name>.wasm`; both scripts point to it. The development daemon (`Compiler` without `Build`) does
+not build workers yet: run a `Build` to try them.
+
+The page code instantiates the worker by giving the manager both script URLs. The manager uses browser capability detection (`wasm-feature-detect` conceptually) to choose the right one:
+```go
+agentworker.Start(Scripts{
+    Plain: "/echo.worker.js",
+    SIMD:  "/echo.simd.worker.js",
+}, ...)
+```
+
 ### Serving infrastructure cache headers
 
 When serving release artifacts, the serving layer should configure HTTP response headers as follows:
