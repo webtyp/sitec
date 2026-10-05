@@ -2,6 +2,8 @@
 PLAN: "feat: development serves ArtifactSources from disk (Range, no copy) and builds web/workers on demand"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 1924443653718636446
 ---
 
 > This plan is dispatched via the CodeJob workflow. See skill: agents-workflow.
