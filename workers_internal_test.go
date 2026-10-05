@@ -1,58 +1,54 @@
 package sitec
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
+// The SIMD build hands TinyGo a target file that enables simd128, and compiles for speed.
 func TestWorkers_SIMDBinaryUsesSIMDTarget(t *testing.T) {
-	origExecCommand := execCommand
-	defer func() { execCommand = origExecCommand }()
+	orig := execCommand
+	t.Cleanup(func() { execCommand = orig })
 
-	var capturedArgs []string
+	var args []string
+	var target string
 	execCommand = func(name string, arg ...string) *exec.Cmd {
-		if strings.HasSuffix(name, "tinygo") || name == "tinygo" {
-			capturedArgs = append(capturedArgs, arg...)
+		if name == "tinygo" {
+			args = arg
+			for i, a := range arg {
+				if a == "-target" && i+1 < len(arg) {
+					data, _ := os.ReadFile(arg[i+1]) // read now: the temp dir is removed after Build
+					target = string(data)
+				}
+			}
 		}
-		// Return a command that will just exit 0, or just run 'echo'
-		return exec.Command("echo") // a safe mock command
+		return exec.Command("true")
 	}
 
-	builder := NewWasmBuilder(false, WasmBuildOptions{
-		Entry:      "web/workers/echo/main.go",
-		OutputName: "echo.simd",
-		SIMD:       true,
-		Speed:      true,
-		HashName:   false,
-	})
+	root := t.TempDir()
+	entry := filepath.Join(root, "web", "workers", "echo", "main.go")
+	if err := os.MkdirAll(filepath.Dir(entry), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(entry, []byte("package main\nfunc main() {}\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
 
-	// Let's create a fake entry file.
-	tmp := t.TempDir()
-	path := tmp + "/web/workers/echo/main.go"
+	_, _ = NewWasmBuilder(false, WasmBuildOptions{
+		Entry: "web/workers/echo/main.go", OutputName: "echo.simd", SIMD: true, Speed: true,
+	}).Build(root) // the stub writes no binary: only the arguments matter here
 
-	// Create it relative to tmp.
-	_ = exec.Command("mkdir", "-p", tmp+"/web/workers/echo").Run()
-	_ = exec.Command("touch", path).Run()
-
-	_, _ = builder.Build(tmp)
-
-	// We can check capturedArgs.
-	hasTargetWasmSimd := false
+	if !strings.Contains(target, "+simd128") {
+		t.Errorf("the -target file does not enable simd128: %q (args %v)", target, args)
+	}
 	hasOpt2 := false
-	for _, arg := range capturedArgs {
-		if strings.Contains(arg, "wasm-simd.json") {
-			hasTargetWasmSimd = true
-		}
-		if arg == "-opt=2" {
-			hasOpt2 = true
-		}
-	}
-
-	if !hasTargetWasmSimd {
-		t.Errorf("Expected tinygo to be called with a target file ending in wasm-simd.json, args were: %v", capturedArgs)
+	for _, a := range args {
+		hasOpt2 = hasOpt2 || a == "-opt=2"
 	}
 	if !hasOpt2 {
-		t.Errorf("Expected tinygo to be called with -opt=2, args were: %v", capturedArgs)
+		t.Errorf("tinygo args lack -opt=2: %v", args)
 	}
 }

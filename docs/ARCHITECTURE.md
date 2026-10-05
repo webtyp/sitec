@@ -219,6 +219,10 @@ This produces four artifacts per worker:
 - Two JavaScript bootstraps (static names, revalidated): `<name>.worker.js` and `<name>.simd.worker.js`.
 - Two WebAssembly binaries (content-hashed names, immutable): `<name>.<hash>.wasm` and `<name>.simd.<hash>.wasm`.
 
+In development (`ModeDev`) each worker is built once, plain, with the Go toolchain, as
+`<name>.wasm`; both scripts point to it. The development daemon (`Compiler` without `Build`) does
+not build workers yet: run a `Build` to try them.
+
 The page code instantiates the worker by giving the manager both script URLs. The manager uses browser capability detection (`wasm-feature-detect` conceptually) to choose the right one:
 ```go
 agentworker.Start(Scripts{

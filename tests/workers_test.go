@@ -2,6 +2,7 @@ package sitec_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -38,12 +39,12 @@ require (
 )
 
 `+func() string {
-	repls := webtypReplaces(t)
-	if repls == "" {
-		return "replace webtyp.com/sitec => " + filepath.Dir(wcwd)
-	}
-	return "replace webtyp.com/sitec => " + filepath.Dir(wcwd) + "\n" + repls
-}())
+		repls := webtypReplaces(t)
+		if repls == "" {
+			return "replace webtyp.com/sitec => " + filepath.Dir(wcwd)
+		}
+		return "replace webtyp.com/sitec => " + filepath.Dir(wcwd) + "\n" + repls
+	}())
 
 	write(filepath.Join(root, "web/client.go"), "package main\nfunc main() {}")
 	write(filepath.Join(root, "html.go"), `//go:build !wasm
@@ -59,6 +60,12 @@ func (a *App) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 `)
 	if workerName != "" {
 		write(filepath.Join(root, "web/workers", workerName, "main.go"), "package main\nfunc main() {}")
+	}
+
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = root
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("go mod tidy: %v %s", err, out)
 	}
 }
 
@@ -111,6 +118,15 @@ func TestWorkers_ReleaseBuildsPlainAndSIMD(t *testing.T) {
 	}
 	if simdWasm == "" {
 		t.Error("Missing hashed simd wasm artifact")
+	}
+
+	if plainWasm == simdWasm {
+		t.Errorf("plain and SIMD builds share the name %s", plainWasm)
+	}
+	// The binaries are TinyGo's: each script must carry TinyGo's wasm_exec glue, not Go's.
+	const tinygoGlue = "modified for use by the TinyGo compiler"
+	if !strings.Contains(plainScript, tinygoGlue) || !strings.Contains(simdScript, tinygoGlue) {
+		t.Error("a release worker script does not load TinyGo's runtime glue")
 	}
 
 	if plainScript != "" && !strings.Contains(plainScript, plainWasm) {
