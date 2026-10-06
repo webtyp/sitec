@@ -18,7 +18,7 @@ import (
 	"webtyp.com/artifacts"
 	twcss "webtyp.com/css"
 	"webtyp.com/fmt"
-	"webtyp.com/fmt/lang"
+	"webtyp.com/lang"
 	"webtyp.com/font"
 	"webtyp.com/image/favicon"
 	imgmin "webtyp.com/image/min"

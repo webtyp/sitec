@@ -12,6 +12,7 @@ require (
 	webtyp.com/html v0.0.24
 	webtyp.com/image v0.1.16
 	webtyp.com/js v0.1.0
+	webtyp.com/lang v0.1.0
 	webtyp.com/modfind v0.0.10
 	webtyp.com/pwa v0.1.1
 	webtyp.com/router v0.3.0
