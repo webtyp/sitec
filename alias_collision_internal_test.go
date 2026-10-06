@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises aliasFor — the import-alias picker of the extractor generator, not reachable through ExtractAll without a colliding module graph on disk.
 //go:build !wasm
 
 package sitec

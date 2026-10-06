@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises execCommand — the injectable command runner of BuildWorkers, replaced to test without a real toolchain.
 package sitec
 
 import (

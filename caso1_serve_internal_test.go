@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises processAsset — the in-memory serve path (case 1) at the asset level, below what the public serve API exposes.
 //go:build !wasm
 
 package sitec

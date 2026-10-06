@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises buildManifest, emitArtifacts — manifest construction for large files, internal to the artifacts emitter.
 //go:build !wasm
 
 package sitec

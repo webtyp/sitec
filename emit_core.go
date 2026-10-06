@@ -132,10 +132,10 @@ type Compiler struct {
 	moduleSprites       map[string]*sprite.Sprite
 	spriteMu            sync.RWMutex
 	fontsMu             sync.RWMutex
-	fonts               font.Declaration   // root module only; zero-value = none
-	site                *Site              // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
-	pwa                 *pwa.Config        // declarado por PWA(); nil = no declarado
-	artifactSources     []artifacts.Source // declarado por ArtifactSources(); solo el raíz
+	fonts               font.Declaration      // root module only; zero-value = none
+	site                *Site                 // declarado por el raíz via RenderSite(); nil = el proyecto es una aplicación
+	pwa                 *pwa.Config           // declarado por PWA(); nil = no declarado
+	artifactSources     []artifacts.Source    // declarado por ArtifactSources(); solo el raíz
 	large               []artifacts.LocalFile // los archivos de artifactSources: URL → ruta en disco
 	largeKey            string                // tamaño y fecha de cada archivo al medirlos (large.go)
 	faviconFiles        []favicon.File
@@ -145,6 +145,10 @@ type Compiler struct {
 	wasmRuntime         string
 	wasmMu              sync.Mutex
 	directArtifacts     []Artifact // pre-built binaries written via Write(), e.g. the WASM binary
+	translationsMu      sync.RWMutex
+	translations        Translations // nil: no dictionary is inlined (English)
+	translationsHTML    string       // the <script id="webtyp-lang"> element, inlined in index.html
+	translationsLastErr string       // last reported error, so a persisting one is logged once
 }
 
 func (c *Compiler) SetFS(fs FS) {
@@ -179,6 +183,76 @@ func (c *Compiler) SetWasm(filename string, runtime string) {
 type ImageProcessor interface {
 	UnobservedFiles() []string
 	Artifacts() []imgmin.Artifact
+}
+
+// translationsFileName is the dictionary file: config/lang.json in a project,
+// lang.json at a library's module root. An edit to it re-bundles the dictionary.
+const translationsFileName = "lang.json"
+
+// Translations keeps the project's translation files in step with its code and
+// produces the element the client reads its dictionary from.
+// webtyp.com/lang/langc implements it; the app injects it.
+type Translations interface {
+	// SyncTranslations updates <rootDir>/config/lang.json from the code.
+	SyncTranslations(rootDir string) error
+	// BundleTranslations returns the complete <script type="application/json" ...>
+	// element with the merged dictionary, or "" when there is nothing to ship.
+	BundleTranslations(rootDir string) (string, error)
+}
+
+// SetTranslations installs the translations provider. Without it, no dictionary
+// is inlined and the client shows English.
+func (c *Compiler) SetTranslations(t Translations) {
+	c.translationsMu.Lock()
+	c.translations = t
+	c.translationsMu.Unlock()
+}
+
+// refreshTranslations syncs (when sync is true) and re-bundles the dictionary,
+// and invalidates the HTML when the inlined element changed. A failure never
+// blocks the build: it is reported once while it persists, and the previous
+// element stays. Must be called WITHOUT c.mu held: the provider may take time,
+// and invalidating the HTML takes the HTML lock (same order rule as setModuleSprite).
+func (c *Compiler) refreshTranslations(sync bool) {
+	c.translationsMu.RLock()
+	t := c.translations
+	c.translationsMu.RUnlock()
+	if t == nil {
+		return
+	}
+	ok := true
+	if sync {
+		if err := t.SyncTranslations(c.RootDir); err != nil {
+			c.reportTranslationsErr("translations sync error:", err)
+			ok = false
+		}
+	}
+	html, err := t.BundleTranslations(c.RootDir)
+	if err != nil {
+		c.reportTranslationsErr("translations bundle error:", err)
+		return
+	}
+	c.translationsMu.Lock()
+	changed := html != c.translationsHTML
+	c.translationsHTML = html
+	if ok {
+		c.translationsLastErr = ""
+	}
+	c.translationsMu.Unlock()
+	if changed {
+		c.indexHtmlHandler.InvalidateCache()
+	}
+}
+
+func (c *Compiler) reportTranslationsErr(prefix string, err error) {
+	msg := prefix + " " + err.Error()
+	c.translationsMu.Lock()
+	repeated := msg == c.translationsLastErr
+	c.translationsLastErr = msg
+	c.translationsMu.Unlock()
+	if !repeated {
+		c.writeMessage(prefix, err)
+	}
 }
 
 type SSRExtractor interface {
@@ -241,6 +315,17 @@ func (c *Compiler) LoadSSRModules() {
 // resolveAndApplyRootCSS are unexported, and Go does not promote them through
 // embedding across package boundaries.
 func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
+	err := c.routeExtractedAssets(all)
+	if err == nil {
+		// After every successful module scan, whoever drove it (LoadSSRModules,
+		// the one-shot build, or app's own retry loop): keep config/lang.json in
+		// step with the code and re-inline the dictionary.
+		c.refreshTranslations(true)
+	}
+	return err
+}
+
+func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -517,6 +602,9 @@ func (c *Compiler) ReloadSSRModule(moduleDir string) error {
 		err = c.emitPages(a)
 	}
 	c.mu.Unlock()
+	if err == nil {
+		c.refreshTranslations(true)
+	}
 	return err
 }
 
@@ -609,6 +697,15 @@ func NewCompiler(ac *Config) *Compiler {
 		return []byte(c.renderSprite())
 	})
 
+	// The translations dictionary lives inside the HTML too, right after the
+	// sprite: in <body>, before #app and before the client <script>, so it
+	// exists when the WASM starts and lang reads it synchronously.
+	c.indexHtmlHandler.AddDynamicContent(func() []byte {
+		c.translationsMu.RLock()
+		defer c.translationsMu.RUnlock()
+		return []byte(c.translationsHTML)
+	})
+
 	// @font-face from the root declaration. Read inside the closure so a later
 	// ReloadSSRModule updates the CSS without re-registering.
 	prefix := path.Join("/", ac.AssetsURLPrefix)
@@ -640,7 +737,7 @@ func (c *Compiler) Logger(messages ...any) {
 }
 
 func (c *Compiler) SupportedExtensions() []string {
-	return []string{".js", ".css", ".svg", ".html"}
+	return []string{".js", ".css", ".svg", ".html", ".json"}
 }
 
 func (c *Compiler) writeMessage(messages ...any) {
