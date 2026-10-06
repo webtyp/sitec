@@ -70,8 +70,7 @@ func (c *Catalog) RenderCSS() stylesheet { return stylesheet(".catalog{display:g
 
 	e := sitec.New(root)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root}})
 	e.SetFinder(f)
 
 	// Esto es exactamente lo que hace webtyp/app: extraer desde la RAÍZ.

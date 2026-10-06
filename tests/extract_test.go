@@ -15,8 +15,7 @@ func TestExtractAll_EmptyIsNotAnError(t *testing.T) {
 	root := t.TempDir()
 	os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/demo\ngo 1.24\n"), 0644)
 	e := sitec.New(root)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/demo", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/demo", Dir: root}})
 	e.SetFinder(f)
 
 	all, err := e.ExtractAll()

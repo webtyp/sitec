@@ -59,8 +59,7 @@ replace example.com/layout => ../layout
 
 	e := sitec.New(appDir)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(appDir, []modfind.Module{
+	f := fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir},
 		{Path: "example.com/layout", Dir: depDir},
 	})

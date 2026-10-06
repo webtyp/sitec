@@ -5,11 +5,11 @@ package sitec_test
 import (
 	"testing"
 
+	"os"
+	"path/filepath"
 	"webtyp.com/router/mock"
 	"webtyp.com/sitec"
 	"webtyp.com/sitec/serve"
-	"os"
-	"path/filepath"
 )
 
 type testSetup struct {

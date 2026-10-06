@@ -65,8 +65,7 @@ func (u *UpstreamLib) RenderCSS() stylesheet { return ".upstream-booking{color:g
 
 	e := sitec.New(appDir)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(appDir, []modfind.Module{
+	f := fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir},
 		{Path: "example.com/appointment_booking", Dir: libDir},
 	})

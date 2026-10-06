@@ -3,8 +3,8 @@
 package sitec_test
 
 import (
-	"webtyp.com/sitec"
 	"testing"
+	"webtyp.com/sitec"
 )
 
 // TestIconSpriteStructure verifies that the generated sprite has correct <symbol> structure

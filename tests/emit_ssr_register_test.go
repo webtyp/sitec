@@ -3,8 +3,8 @@
 package sitec_test
 
 import (
-	"webtyp.com/css"
 	"testing"
+	"webtyp.com/css"
 )
 
 type mockComponent struct {

@@ -4,10 +4,10 @@ package sitec_test
 
 import (
 	"bytes"
-	"webtyp.com/sitec"
 	"os"
 	"path/filepath"
 	"testing"
+	"webtyp.com/sitec"
 )
 
 // TestSSRModeDelegation validates Compiler behavior in SSR (Server-Side Rendering) mode.

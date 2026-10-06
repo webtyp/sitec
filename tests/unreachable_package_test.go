@@ -36,7 +36,7 @@ func writeTree(t *testing.T, base string, files map[string]string) {
 // example.com/extra is absent from app's go.mod/go.sum, exactly like
 // webtyp.com/date is absent from layout's go.sum: the consumer never
 // reaches the package that needs it, so `go mod tidy` will never add it.
-func setupUnreachablePackageProject(t *testing.T) (appDir, depDir string, finder *modfind.Finder) {
+func setupUnreachablePackageProject(t *testing.T) (appDir, depDir string, finder fakeModules) {
 	t.Helper()
 	base := t.TempDir()
 	appDir = filepath.Join(base, "app")
@@ -85,8 +85,7 @@ func (a *App) RenderCSS() stylesheet { return ".app{color:green}" }
 `,
 	})
 
-	finder = modfind.New()
-	finder.Seed(appDir, []modfind.Module{
+	finder = fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir, IsMain: true},
 		{Path: "example.com/dep", Dir: depDir},
 	})
@@ -231,8 +230,7 @@ func (b *Beta) RenderCSS() stylesheet { return ".beta{color:blue}" }
 
 	e := sitec.New(filepath.Join(appDir, "alpha"))
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(appDir, []modfind.Module{{Path: "example.com/app", Dir: appDir, IsMain: true}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: appDir, IsMain: true}})
 	e.SetFinder(f)
 
 	a, err := e.ExtractModule(filepath.Join(appDir, "alpha"))

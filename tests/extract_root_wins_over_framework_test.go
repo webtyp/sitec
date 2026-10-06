@@ -109,8 +109,7 @@ func RootCSS() stylesheet {
 
 	e := sitec.New(appDir)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(appDir, []modfind.Module{
+	f := fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir},
 		{Path: "example.com/webtyp.com/css", Dir: cssDir},
 	})

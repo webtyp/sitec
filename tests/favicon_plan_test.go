@@ -156,7 +156,7 @@ require (
 
 replace webtyp.com/sitec => `+repoRoot+`
 replace example.com/widget => ./libwidget
-` + webtypReplaces(t))
+`+webtypReplaces(t))
 	raster := pngBytesHelper(t, 256, 256)
 	os.WriteFile(filepath.Join(appDir, "logo.png"), raster, 0644)
 	write(filepath.Join(appDir, "app.go"), `package app
@@ -183,7 +183,7 @@ require (
 	webtyp.com/css v0.4.15
 	webtyp.com/image v0.1.0
 )
-` + webtypReplaces(t))
+`+webtypReplaces(t))
 	write(filepath.Join(libDir, "widget.go"), `package widget
 
 import (

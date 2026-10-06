@@ -73,8 +73,7 @@ func (s *SpecialtyPages) RenderPages() []html.Page {
 	}
 
 	// Set up seed finder so modfind succeeds in tmpDir
-	finder := modfind.New()
-	finder.Seed(tmpDir, []modfind.Module{
+	finder := fakeModules([]modfind.Module{
 		{Path: "example.com/clinic", Dir: tmpDir},
 	})
 

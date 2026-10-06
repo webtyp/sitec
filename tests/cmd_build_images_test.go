@@ -102,8 +102,7 @@ func RenderCSS() *css.Stylesheet {
 	outDir := filepath.Join(tmpDir, "web", "public")
 
 	// Set up Finder seed to avoid running go list in mock module
-	fFinder := modfind.New()
-	fFinder.Seed(tmpDir, []modfind.Module{
+	fFinder := fakeModules([]modfind.Module{
 		{Path: "example.com/imgtest", Dir: tmpDir},
 	})
 
@@ -129,7 +128,7 @@ func RenderCSS() *css.Stylesheet {
 		Quality:   82,
 	})
 	imgHandler.SetLog(func(msg ...any) { t.Log(msg...) })
-	imgHandler.SetFinder(e.Finder())
+	imgHandler.SetFinder(fFinder)
 	am.SetImageProcessor(imgHandler)
 
 	if err := am.RouteExtractedAssets(all); err != nil {

@@ -3,11 +3,11 @@
 package sitec_test
 
 import (
-	"webtyp.com/js"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"webtyp.com/js"
 )
 
 type standaloneComponent struct {

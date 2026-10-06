@@ -31,8 +31,7 @@ func setupBaseApp(t *testing.T) string {
 
 func seedExtractor(root string) *sitec.Extractor {
 	e := sitec.New(root)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root, IsMain: true}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root, IsMain: true}})
 	e.SetFinder(f)
 	return e
 }

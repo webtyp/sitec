@@ -21,7 +21,7 @@ type module struct {
 
 type Extractor struct {
 	rootDir        string
-	finder         *modfind.Finder
+	finder         modfind.Discoverer
 	log            func(...any)
 	cache          *ssrCache
 	scanner        *scanner
@@ -51,14 +51,14 @@ func New(rootDir string) *Extractor {
 	}
 }
 
-func (e *Extractor) SetLog(fn func(...any))        { e.log = fn }
-func (e *Extractor) SetVerbose(v bool)             { e.verbose = v }
-func (e *Extractor) SetFinder(f *modfind.Finder)   { e.finder = f }
-func (e *Extractor) SetGraphLister(l GraphLister)  { e.lister = l }
-func (e *Extractor) SetToolchain(t Toolchain)      { e.toolchain = t }
-func (e *Extractor) SetWasmBuilder(wb WasmBuilder) { e.wasmBuilder = wb }
+func (e *Extractor) SetLog(fn func(...any))         { e.log = fn }
+func (e *Extractor) SetVerbose(v bool)              { e.verbose = v }
+func (e *Extractor) SetFinder(f modfind.Discoverer) { e.finder = f }
+func (e *Extractor) SetGraphLister(l GraphLister)   { e.lister = l }
+func (e *Extractor) SetToolchain(t Toolchain)       { e.toolchain = t }
+func (e *Extractor) SetWasmBuilder(wb WasmBuilder)  { e.wasmBuilder = wb }
 
-func (e *Extractor) Finder() *modfind.Finder {
+func (e *Extractor) discoverer() modfind.Discoverer {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.finder == nil {

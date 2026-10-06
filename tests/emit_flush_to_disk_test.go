@@ -17,11 +17,11 @@ package sitec_test
 // Defect identifiers (B1, B2, B3) match docs/PLAN.md §Root cause.
 
 import (
-	"webtyp.com/sitec"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"webtyp.com/sitec"
 
 	imgmin "webtyp.com/image/min"
 )

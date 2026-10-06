@@ -96,8 +96,7 @@ func TestExtract_FontsProducer(t *testing.T) {
 
 	e := sitec.New(root)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root}})
 	e.SetFinder(f)
 
 	assets, err := e.ExtractModule(root)
@@ -132,8 +131,7 @@ func RootCSS() stylesheet { return stylesheet(":root{--x:1}") }
 
 	e := sitec.New(root)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root}})
 	e.SetFinder(f)
 
 	assets, err := e.ExtractModule(root)
@@ -167,8 +165,7 @@ func Fonts() font.Declaration {
 
 	e := sitec.New(root)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root}})
 	e.SetFinder(f)
 
 	_, err := e.ExtractModule(root)
@@ -201,8 +198,7 @@ func (b *Box[T]) Fonts() font.Declaration {
 
 	e := sitec.New(root)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root}})
 	e.SetFinder(f)
 
 	_, err := e.ExtractModule(root)

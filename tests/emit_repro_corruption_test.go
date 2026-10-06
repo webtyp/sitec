@@ -3,12 +3,12 @@
 package sitec_test
 
 import (
-	"webtyp.com/sitec"
 	"log"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+	"webtyp.com/sitec"
 )
 
 // TestReproCorruption simulates the exact scenario reported by the user:

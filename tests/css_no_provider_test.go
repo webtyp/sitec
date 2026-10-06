@@ -43,8 +43,7 @@ func (m *MyWidget) GenerateCSS() string {
 	}
 
 	e := sitec.New(root)
-	f := modfind.New()
-	f.Seed(root, []modfind.Module{{Path: "example.com/app", Dir: root}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/app", Dir: root}})
 	e.SetFinder(f)
 
 	_, err := e.ExtractModule(root)

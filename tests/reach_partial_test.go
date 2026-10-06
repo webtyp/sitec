@@ -37,8 +37,7 @@ func TestExtractAll_PartialReachabilityDoesNotFilter(t *testing.T) {
 
 	e := sitec.New(appDir)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(appDir, []modfind.Module{
+	f := fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir},
 		{Path: "example.com/widget", Dir: widgetDir},
 	})
@@ -101,8 +100,7 @@ func RootCSS() stylesheet { return ":root{--app:1}" }
 
 	e := sitec.New(appDir)
 	e.SetLog(t.Log)
-	f := modfind.New()
-	f.Seed(appDir, []modfind.Module{
+	f := fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir},
 		{Path: "example.com/widget", Dir: widgetDir},
 	})

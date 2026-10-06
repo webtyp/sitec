@@ -3,8 +3,8 @@
 package sitec_test
 
 import (
-	"webtyp.com/sitec"
 	"testing"
+	"webtyp.com/sitec"
 )
 
 func TestReplaceRoot(t *testing.T) {

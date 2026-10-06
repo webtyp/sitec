@@ -3,13 +3,13 @@
 package sitec_test
 
 import (
-	"webtyp.com/router/mock"
-	"webtyp.com/sitec"
-	"webtyp.com/sitec/serve"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"webtyp.com/router/mock"
+	"webtyp.com/sitec"
+	"webtyp.com/sitec/serve"
 )
 
 func TestFaviconProcessing(t *testing.T) {

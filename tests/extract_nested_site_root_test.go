@@ -109,8 +109,7 @@ func main() {}
 
 		e := sitec.New(siteDir)
 		e.SetLog(t.Log)
-		f := modfind.New()
-		f.Seed(siteDir, []modfind.Module{
+		f := fakeModules([]modfind.Module{
 			{Path: "example.com/app", Dir: appDir},
 			{Path: "example.com/webtyp.com/css", Dir: cssDir},
 		})

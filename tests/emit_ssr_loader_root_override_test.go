@@ -3,10 +3,10 @@
 package sitec_test
 
 import (
-	"webtyp.com/css"
-	"webtyp.com/sitec"
 	"strings"
 	"testing"
+	"webtyp.com/css"
+	"webtyp.com/sitec"
 )
 
 type mockRootProvider struct {

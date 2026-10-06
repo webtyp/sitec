@@ -48,8 +48,7 @@ func (s *Sub) RenderCSS() stylesheet { return stylesheet(".sub{color:red}") }
 	e := sitec.New(parentDir)
 	e.SetLog(t.Log)
 	// Mock list modules to include the parent module only, simulating go list -m
-	f := modfind.New()
-	f.Seed(parentDir, []modfind.Module{{Path: "example.com/parent", Dir: parentDir}})
+	f := fakeModules([]modfind.Module{{Path: "example.com/parent", Dir: parentDir}})
 	e.SetFinder(f)
 
 	assets, err := e.ExtractModule(subDir)

@@ -407,7 +407,7 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 	if cfg.Log != nil {
 		imgHandler.SetLog(cfg.Log)
 	}
-	imgHandler.SetFinder(e.Finder())
+	imgHandler.SetFinder(e.discoverer())
 	c.SetImageProcessor(imgHandler)
 
 	wb := e.WasmBuilder()
