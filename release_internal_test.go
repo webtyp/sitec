@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises finalizeRelease, releaseInput — the release finalisation step and its diagnostics (msgPWAWithoutFavicon), internal to Build.
 package sitec
 
 import (

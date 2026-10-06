@@ -82,6 +82,18 @@ func (c *Compiler) NewFileEvent(fileName, extension, filePath, event string) err
 		return nil
 	}
 
+	// .json is routed here only for the dictionary files: an edit by a person or
+	// an LLM re-bundles the inlined dictionary (no sync — the generator must not
+	// rewrite the file on every keystroke). Any other .json is not ours.
+	if extension == ".json" {
+		if filepath.Base(filePath) == translationsFileName {
+			c.mu.Unlock()
+			c.refreshTranslations(false)
+			c.mu.Lock()
+		}
+		return nil
+	}
+
 	if extension == ".go" {
 		fn := c.onSSRCompile
 		if fn != nil {

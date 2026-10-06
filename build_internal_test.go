@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises linkFile, placeLargeFiles — the large-file placement step of Build, observable from outside only by building a real artifacts app.
 //go:build !wasm
 
 package sitec

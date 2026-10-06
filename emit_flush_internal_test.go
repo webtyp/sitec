@@ -1,3 +1,4 @@
+// Root-level test (justified): exercises asset internals — the disk-mirroring flush of individual assets, not exposed by the Compiler API.
 //go:build !wasm
 
 package sitec

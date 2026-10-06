@@ -15,22 +15,26 @@ Se llamaba `webtyp/ssr`. Ese nombre describía una técnica que la librería no
 implementa: nada se renderiza server-side por petición; los productores corren
 una vez en build y el resultado es estático.
 
-## Los tests van TODOS en `tests/`
+## Los tests van en `tests/`; en la raíz solo con justificación
 
 ```
 ✅  tests/emit_fonts_test.go
 ✅  tests/serve_http_test.go
 ✅  tests/extract_test.go
 
-❌  fonts_test.go              (en la raíz)
 ❌  tests_emit/fonts_test.go   (otra carpeta)
 ❌  serve/serve_test.go        (junto al código)
 ```
 
-**Regla:** ni un solo `*_test.go` fuera de `tests/`. Verificable:
+**Regla del ecosistema** (skill **testing** → «Test location»): todo test vive en `tests/`
+(paquete externo, solo API pública). Un test queda en la raíz (`package sitec`) **solo** si
+necesita un identificador no exportado y el comportamiento no se puede observar desde la API
+pública; su primera línea lo justifica:
+`// Root-level test (justified): exercises <identificadores> — <por qué>.`
+**Nunca se exporta un símbolo para que un test lo alcance.** Verificable:
 
 ```sh
-find . -name "*_test.go" -not -path "./tests/*" -not -path "./.git/*"
+for f in *_test.go; do head -1 "$f" | grep -q "Root-level test (justified)" || echo "$f"; done
 # debe devolver vacío
 ```
 

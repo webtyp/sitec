@@ -142,3 +142,14 @@ first lines.
 | 1 | Contract | `emit_core.go` |
 | 2 | Hook points | `emit_core.go`, `emit_events.go` |
 | 3 | Tests + AGENTS | `tests/translations_test.go`, `AGENTS.md`, root `*_internal_test.go` |
+
+## Executor notes
+
+- The executor's PR contained no implementation (only the STATUS change). The planning agent
+  implemented the plan on this branch: `Translations`/`SetTranslations`, `refreshTranslations`
+  (called after every successful `RouteExtractedAssets` — wrapper around the former body, now
+  `routeExtractedAssets` — and after `ReloadSSRModule`, so app's own retry loop is covered too),
+  the inline after the sprite, `.json` routed to `NewFileEvent` for `lang.json` only (re-bundle, no
+  sync), errors logged once while they persist.
+- Tests: `tests/translations_test.go`. The seven root `*_internal_test.go` keep their place with a
+  justification line (all use unexported identifiers); `AGENTS.md` now states the ecosystem rule.
