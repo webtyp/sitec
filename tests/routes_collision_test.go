@@ -35,7 +35,7 @@ func RootCSS() stylesheet {
 }
 `
 
-// Case 1: Project with no routes/routes.go -> Routes() empty, Build succeeds.
+// Case 1: Project with no config/routes.go -> Routes() empty, Build succeeds.
 func TestRoutes_NoRoutesFile(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
@@ -58,7 +58,7 @@ func TestRoutes_ThreeRoutesInOrder(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
-	writeFixtureFile(t, root, "routes/routes.go", `package routes
+	writeFixtureFile(t, root, "config/routes.go", `package routes
 
 import "webtyp.com/router"
 
@@ -97,7 +97,7 @@ func TestRoutes_CollisionBuildFails(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
-	writeFixtureFile(t, root, "routes/routes.go", `package routes
+	writeFixtureFile(t, root, "config/routes.go", `package routes
 
 import "webtyp.com/router"
 
@@ -117,8 +117,8 @@ func Routes(r router.Router) {
 	}
 
 	errMsg := err.Error()
-	if !strings.Contains(errMsg, "route GET /style.css (routes/routes.go:6) collides with the static asset /style.css") &&
-		!strings.Contains(errMsg, "route GET /style.css (routes/routes.go:6) collides with the static asset style.css") {
+	if !strings.Contains(errMsg, "route GET /style.css (config/routes.go:6) collides with the static asset /style.css") &&
+		!strings.Contains(errMsg, "route GET /style.css (config/routes.go:6) collides with the static asset style.css") {
 		t.Errorf("error message mismatch: %v", errMsg)
 	}
 
@@ -133,7 +133,7 @@ func TestRoutes_CollisionCheckReportsError(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
-	writeFixtureFile(t, root, "routes/routes.go", `package routes
+	writeFixtureFile(t, root, "config/routes.go", `package routes
 
 import "webtyp.com/router"
 
@@ -156,7 +156,7 @@ func TestRoutes_NoCollisionSuccess(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
-	writeFixtureFile(t, root, "routes/routes.go", `package routes
+	writeFixtureFile(t, root, "config/routes.go", `package routes
 
 import "webtyp.com/router"
 
@@ -182,7 +182,7 @@ func TestRoutes_ParameterizedRouteNoCollisionPrefix(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
-	writeFixtureFile(t, root, "routes/routes.go", `package routes
+	writeFixtureFile(t, root, "config/routes.go", `package routes
 
 import "webtyp.com/router"
 
@@ -203,12 +203,12 @@ func Routes(r router.Router) {
 	}
 }
 
-// Case 7: Malformed path/declaration in routes/routes.go -> Build fails with routescan error.
+// Case 7: Malformed path/declaration in config/routes.go -> Build fails with routescan error.
 func TestRoutes_ScanErrorFailsBuild(t *testing.T) {
 	root := t.TempDir()
 	writeFixtureFile(t, root, "go.mod", "module example.com/app\n\ngo 1.25.2\n")
 	writeFixtureFile(t, root, "app.go", fixtureAppGo)
-	writeFixtureFile(t, root, "routes/routes.go", `package routes
+	writeFixtureFile(t, root, "config/routes.go", `package routes
 
 import "webtyp.com/router"
 

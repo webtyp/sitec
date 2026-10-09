@@ -69,7 +69,7 @@ type BuildConfig struct {
 // ErrRouteCollides is returned when a declared route has the same path as a
 // produced static artifact. The artifact is served first, so the route would be
 // unreachable with no error anywhere.
-const ErrRouteCollides = "route %s %s (routes/routes.go:%d) collides with the static asset %s — the asset is served first and the route would never run"
+const ErrRouteCollides = "route %s %s (%s:%d) collides with the static asset %s — the asset is served first and the route would never run"
 
 const symbolParamStart = "{"
 
@@ -133,7 +133,7 @@ func checkRouteCollisions(routes []routescan.Decl, artifacts []Artifact) error {
 		routeSegs := splitPath(decl.Path)
 		for _, art := range parsedArts {
 			if routeMatchesArtifact(routeSegs, art.segments) {
-				return fmt.Err(fmt.Sprintf(ErrRouteCollides, decl.Method, decl.Path, decl.Line, art.origPath))
+				return fmt.Err(fmt.Sprintf(ErrRouteCollides, decl.Method, decl.Path, routescan.DefaultFile, decl.Line, art.origPath))
 			}
 		}
 	}
@@ -149,7 +149,7 @@ type Output struct {
 	large  []artifacts.LocalFile
 }
 
-// Routes returns the routes the project declared in routes/routes.go, in
+// Routes returns the routes the project declared in config/routes.go, in
 // source order. Empty when the project declares none.
 func (s *Output) Routes() []routescan.Decl {
 	if s == nil {
