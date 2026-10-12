@@ -12,8 +12,8 @@ require (
 	webtyp.com/html v0.0.27
 	webtyp.com/image v0.1.16
 	webtyp.com/js v0.1.0
-	webtyp.com/lang v0.1.3
-	webtyp.com/modfind v0.0.10
+	webtyp.com/lang v0.1.5
+	webtyp.com/modfind v0.0.11
 	webtyp.com/pwa v0.1.1
 	webtyp.com/router v0.4.0
 	webtyp.com/svg v0.3.14
