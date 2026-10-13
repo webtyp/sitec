@@ -33,5 +33,5 @@ require (
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/json v0.5.29 // indirect
-	webtyp.com/model v0.2.2 // indirect
+	webtyp.com/model v0.2.3 // indirect
 )
