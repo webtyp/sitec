@@ -15,7 +15,7 @@ require (
 	webtyp.com/lang v0.1.6
 	webtyp.com/modfind v0.0.11
 	webtyp.com/pwa v0.2.0
-	webtyp.com/router v0.4.2
+	webtyp.com/router v0.4.3
 	webtyp.com/svg v0.3.14
 	webtyp.com/tinygo v1.0.1
 )
