@@ -2,8 +2,10 @@
 PLAN: "refactor: build web/browser.go with -tags browser into browser.wasm and probe js/wasm with -tags=browser"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 11030676366596612176
+PR: https://github.com/webtyp/sitec/pull/30
+REVIEWED_COMMIT: ea625c2ad155fb48d30552463efd9391734b7356
 ---
 
 > Read `AGENTS.md` at the repo root before any change.
