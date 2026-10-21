@@ -2,6 +2,8 @@
 PLAN: "refactor: build web/browser.go with -tags browser into browser.wasm and probe js/wasm with -tags=browser"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 11030676366596612176
 ---
 
 > Read `AGENTS.md` at the repo root before any change.
