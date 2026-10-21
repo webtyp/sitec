@@ -39,8 +39,8 @@ type GraphLister func(rootDir, pattern, goos, goarch string) ([]string, error)
 // client never shows up in the server's graph, and dropping it would lose
 // its styles.
 var buildTargets = []struct{ GOOS, GOARCH string }{
-	{"", ""},       // native: the server binary
-	{"js", "wasm"}, // the browser client
+	{"", ""},       // native: the server binary and the SSR extractor
+	{"js", "wasm"}, // the browser client and edge.wasm
 }
 
 type reachability struct {
@@ -56,10 +56,39 @@ type reachability struct {
 	partial bool
 }
 
-// goListDeps is the default GraphLister implementation.
-func goListDeps(rootDir, pattern, goos, goarch string) ([]string, error) {
-	tc := NewExecToolchain()
-	env := []string{}
+// destinationTags are the build-tag sets probed for every platform. The
+// destination axis (browser) is orthogonal to the platform axis (GOOS):
+// web/browser.go is `browser`, while the css.go files of the packages it
+// imports are `!wasm` — so webtyp.com/css is only reached by the NATIVE graph
+// WITH -tags=browser, and the js/wasm graph without the tag is edge.wasm.
+var destinationTags = []string{"", browserBuildTag}
+
+// goListDeps is the default GraphLister: the union of `go list -deps` over
+// destinationTags for the given platform, run through tc. It is the only
+// lister — a second copy once missed the browser tag and every browser-only
+// package was dropped.
+func goListDeps(tc Toolchain) GraphLister {
+	return func(rootDir, pattern, goos, goarch string) ([]string, error) {
+		var out []string
+		for _, tags := range destinationTags {
+			deps, err := listDeps(tc, rootDir, pattern, goos, goarch, tags)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, deps...)
+		}
+		return out, nil
+	}
+}
+
+func listDeps(tc Toolchain, rootDir, pattern, goos, goarch, tags string) ([]string, error) {
+	args := []string{"-e", "-deps"}
+	if tags != "" {
+		args = append(args, "-tags="+tags)
+	}
+	args = append(args, pattern)
+
+	var env []string
 	if goos != "" {
 		env = append(env, "GOOS="+goos)
 	}
@@ -70,9 +99,9 @@ func goListDeps(rootDir, pattern, goos, goarch string) ([]string, error) {
 	var data []byte
 	var err error
 	if len(env) > 0 {
-		data, err = tc.ListEnv(rootDir, env, "-e", "-tags="+browserBuildTag, "-deps", pattern)
+		data, err = tc.ListEnv(rootDir, env, args...)
 	} else {
-		data, err = tc.List(rootDir, "-e", "-deps", pattern)
+		data, err = tc.List(rootDir, args...)
 	}
 	if err != nil {
 		return nil, err
@@ -94,7 +123,7 @@ func goListDeps(rootDir, pattern, goos, goarch string) ([]string, error) {
 // nil to stay silent (non-verbose callers).
 func computeReachability(rootDir string, lister GraphLister, log func(...any)) reachability {
 	if lister == nil {
-		lister = goListDeps
+		lister = goListDeps(NewExecToolchain())
 	}
 
 	set := make(reachSet)

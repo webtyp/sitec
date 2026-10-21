@@ -248,3 +248,81 @@ func (b *Beta) RenderCSS() stylesheet { return ".beta{color:blue}" }
 		t.Errorf("LEAKED sibling package CSS not reachable from started dir: %q", a.CSS)
 	}
 }
+
+// TestExtractAll_PackageImportedOnlyByBrowserMainShips covers a module repo
+// whose only consumer of the UI is web/browser.go (//go:build browser): the
+// js/wasm reachability probe must list ./... with -tags=browser, or every
+// package that main imports is reported "not in the build graph" and
+// style.css is served empty. Since css.go files are native-only (!wasm),
+// the native probe must also carry -tags=browser: that is how webtyp.com/css
+// is reached from a browser-only UI.
+func TestExtractAll_PackageImportedOnlyByBrowserMainShips(t *testing.T) {
+	base := t.TempDir()
+	appDir := filepath.Join(base, "app")
+	depDir := filepath.Join(base, "dep")
+	writeTree(t, depDir, map[string]string{
+		"go.mod": "module example.com/dep\n\ngo 1.24\n",
+		"shell/shell.go": "package shell\n",
+		// css.go is native-only (!wasm) and is the sole importer of theme, so
+		// theme is reachable only from the native graph WITH -tags=browser.
+		"shell/css.go": `//go:build !wasm
+
+package shell
+
+import _ "example.com/dep/theme"
+` + stylesheetHelper + `
+type Shell struct{}
+
+func (s *Shell) RenderCSS() stylesheet { return ".shell{color:red}" }
+`,
+		"theme/css.go": `//go:build !wasm
+
+package theme
+` + stylesheetHelper + `
+type Theme struct{}
+
+func (t *Theme) RenderCSS() stylesheet { return ".theme{color:blue}" }
+`,
+	})
+	writeTree(t, appDir, map[string]string{
+		"go.mod": `module example.com/app
+
+go 1.24
+
+require example.com/dep v0.0.0
+
+replace example.com/dep => ../dep
+`,
+		"module.go": "package app\n",
+		"web/browser.go": `//go:build browser
+
+package main
+
+import _ "example.com/dep/shell"
+
+func main() {}
+`,
+	})
+
+	e := sitec.New(appDir)
+	e.SetLog(t.Log)
+	e.SetFinder(fakeModules([]modfind.Module{
+		{Path: "example.com/app", Dir: appDir, IsMain: true},
+		{Path: "example.com/dep", Dir: depDir},
+	}))
+
+	all, err := e.ExtractAll()
+	if err != nil {
+		t.Fatalf("ExtractAll: %v", err)
+	}
+	var css strings.Builder
+	for _, a := range all {
+		css.WriteString(a.CSS)
+	}
+	if !strings.Contains(css.String(), ".shell{color:red}") {
+		t.Errorf("CSS of a package imported only by the browser-tagged main was dropped as unreachable.\n  got: %q", css.String())
+	}
+	if !strings.Contains(css.String(), ".theme{color:blue}") {
+		t.Errorf("CSS of a package reached only through a native css.go of a browser-only import was dropped as unreachable.\n  got: %q", css.String())
+	}
+}

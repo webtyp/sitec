@@ -79,37 +79,6 @@ func (e *Extractor) SetAssetLibraries(libs []string) {
 	e.AssetLibraries = libs
 }
 
-func (e *Extractor) defaultLister(rootDir, pattern, goos, goarch string) ([]string, error) {
-	env := []string{}
-	if goos != "" {
-		env = append(env, "GOOS="+goos)
-	}
-	if goarch != "" {
-		env = append(env, "GOARCH="+goarch)
-	}
-
-	var data []byte
-	var err error
-	if len(env) > 0 {
-		data, err = e.toolchain.ListEnv(rootDir, env, "-e", "-deps", pattern)
-	} else {
-		data, err = e.toolchain.List(rootDir, "-e", "-deps", pattern)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(string(data), "\n")
-	var out []string
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed != "" {
-			out = append(out, trimmed)
-		}
-	}
-	return out, nil
-}
-
 func (e *Extractor) results(projectRoot string, startDir string, modules []module) (map[string]CollectorOutput, error) {
 	hashKey, err := computeModuleHashSet(modules)
 	if err != nil {
@@ -121,7 +90,7 @@ func (e *Extractor) results(projectRoot string, startDir string, modules []modul
 	if !hasCached {
 		l := e.lister
 		if l == nil {
-			l = e.defaultLister
+			l = goListDeps(e.toolchain)
 		}
 		results, err := invokeSSRExtractorOnce(projectRoot, startDir, modules, e.scanner, e.AssetLibraries, l, e.log, e.toolchain, e.verbose)
 		if err != nil {
