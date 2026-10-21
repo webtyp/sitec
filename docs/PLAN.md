@@ -2,6 +2,8 @@
 PLAN: "fix: fail loudly when an asset file of a reachable package imports a package the reachability probe skipped"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 15836594489846526342
 ---
 
 > Read AGENTS.md at the repo root before any change.
