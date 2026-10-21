@@ -11,18 +11,24 @@ import (
 	"webtyp.com/tinygo"
 )
 
+const (
+	defaultBrowserEntryFile = "browser.go"
+	defaultBrowserOutput    = "browser.wasm"
+	browserBuildTag         = "browser"
+)
+
 // WasmBuildOptions selects what to compile and what to call the result.
 //
-// The zero value builds a site frontend: web/client.go → client.wasm. Set the
+// The zero value builds a site frontend: web/browser.go → browser.wasm. Set the
 // fields to compile something else — an edge worker entry point, for example,
 // which is main.go and must come out named for the platform that serves it.
 type WasmBuildOptions struct {
 	// Entry is the input file relative to the directory passed to Build, used to
 	// locate the package directory to compile and verify its existence.
-	// Empty means "web/client.go".
+	// Empty means "web/browser.go".
 	Entry string
 	// OutputName is the artifact name without the .wasm extension.
-	// Empty means "client".
+	// Empty means "browser".
 	OutputName string
 
 	// SIMD builds with TinyGo +simd128 and -opt=2 (Web Workers that run models).
@@ -36,14 +42,14 @@ type WasmBuildOptions struct {
 
 func (o WasmBuildOptions) entry() string {
 	if o.Entry == "" {
-		return filepath.Join("web", "client.go")
+		return filepath.Join("web", defaultBrowserEntryFile)
 	}
 	return o.Entry
 }
 
 func (o WasmBuildOptions) filename() string {
 	if o.OutputName == "" {
-		return "client.wasm"
+		return defaultBrowserOutput
 	}
 	return o.OutputName + ".wasm"
 }
@@ -54,8 +60,8 @@ type defaultWasmBuilder struct {
 	opts     WasmBuildOptions
 }
 
-// NewDefaultWasmBuilder builds a site frontend from web/client.go.
-// In release (devMode false) the binary is named by its content hash (client.<hash>.wasm) and
+// NewDefaultWasmBuilder builds a site frontend from web/browser.go.
+// In release (devMode false) the binary is named by its content hash (browser.<hash>.wasm) and
 // the page bootstrap loads that name.
 func NewDefaultWasmBuilder(devMode bool) WasmBuilder {
 	return &defaultWasmBuilder{hashName: !devMode, stdlib: devMode}
@@ -111,6 +117,7 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	// (el directorio) en vez de un archivo suelto. Esto permite que el paquete
 	// tenga archivos hermanos (ej: main.go y access.go).
 	var cmd *exec.Cmd
+	isBrowser := filepath.Base(entry) == defaultBrowserEntryFile
 	if !w.stdlib {
 		args := []string{"build"}
 
@@ -127,6 +134,10 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 			}
 		}
 
+		if isBrowser {
+			args = append(args, "-tags", browserBuildTag)
+		}
+
 		// -no-debug: a shipped web binary is never a source-level debug
 		// target — DWARF info alone is the difference between ~99 KiB and
 		// ~456 KiB for a minimal client, which is most of a size budget spent
@@ -134,7 +145,11 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 		args = append(args, "-no-debug", "-o", tmpOutPath, ".")
 		cmd = execCommand("tinygo", args...)
 	} else {
-		cmd = execCommand("go", "build", "-o", tmpOutPath, ".")
+		if isBrowser {
+			cmd = execCommand("go", "build", "-tags", browserBuildTag, "-o", tmpOutPath, ".")
+		} else {
+			cmd = execCommand("go", "build", "-o", tmpOutPath, ".")
+		}
 	}
 	cmd.Dir = pkgDir
 	cmd.Env = env

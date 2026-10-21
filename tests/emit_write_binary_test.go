@@ -32,14 +32,14 @@ func TestCompiler_WriteBinaryContentSurvivesFlush(t *testing.T) {
 
 	content := []byte{0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00, 0xff, 0x00}
 
-	if err := am.Write("client.wasm", content, "application/wasm"); err != nil {
+	if err := am.Write("browser.wasm", content, "application/wasm"); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
 	if err := am.FlushToDisk(); err != nil {
 		t.Fatalf("FlushToDisk: %v", err)
 	}
 
-	got, err := os.ReadFile(filepath.Join(outDir, "client.wasm"))
+	got, err := os.ReadFile(filepath.Join(outDir, "browser.wasm"))
 	if err != nil {
 		t.Fatalf("reading written file: %v", err)
 	}
@@ -55,13 +55,13 @@ func TestCompiler_WriteRegistersArtifactInList(t *testing.T) {
 	am := sitec.NewCompiler(&sitec.Config{OutputDir: t.TempDir()})
 	am.SetFS(sitec.NewMemFS())
 
-	if err := am.Write("client.wasm", []byte{0x00, 0x61, 0x73, 0x6d}, "application/wasm"); err != nil {
+	if err := am.Write("browser.wasm", []byte{0x00, 0x61, 0x73, 0x6d}, "application/wasm"); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
 
 	var found bool
 	for _, a := range am.List() {
-		if a.Path == "/client.wasm" && a.Mediatype == "application/wasm" {
+		if a.Path == "/browser.wasm" && a.Mediatype == "application/wasm" {
 			found = true
 		}
 	}

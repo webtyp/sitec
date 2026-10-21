@@ -143,3 +143,6 @@ File: `docs/ARCHITECTURE.md`
 | 2 | `tests/build_wasm_output_test.go`, `tests/workers_test.go`, `tests/serve_http_test.go`, `tests/emit_write_binary_test.go`, `caso1_serve_internal_test.go` | Update tests to `web/browser.go` / `browser.wasm` and test coexistence with `web/edge.go` |
 | 3 | `docs/ARCHITECTURE.md` | Update hashed WASM example to `browser.3f9a1c2b.wasm` |
 
+## Executor notes
+
+All steps were successfully completed. `web/client.go` defaults and `client.wasm` artifacts were fully replaced with `web/browser.go` and `browser.wasm`. `gotest ./...` verified all tests successfully pass. The codebase was built properly.

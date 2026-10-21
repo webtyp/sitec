@@ -238,7 +238,7 @@ agentworker.Start(Scripts{
 
 When serving release artifacts, the serving layer should configure HTTP response headers as follows:
 
-- **Hashed assets** (`style.3f9a1c2b.css`, `script.816fa8ef.js`, `client.3f9a1c2b.wasm`): `Cache-Control: public, max-age=31536000, immutable`
+- **Hashed assets** (`style.3f9a1c2b.css`, `script.816fa8ef.js`, `browser.3f9a1c2b.wasm`): `Cache-Control: public, max-age=31536000, immutable`
 - **Shell and dynamic entry points** (`/`, `sw.js`, `manifest.webmanifest`): `Cache-Control: no-cache`
 - **Large artifacts** (`/artifacts/…`): `Cache-Control: no-store` — `artifacts` keeps them in OPFS itself
 

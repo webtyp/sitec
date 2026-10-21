@@ -152,14 +152,14 @@ func TestCompilerWriteServiblePorHTTP(t *testing.T) {
 
 	am := sitec.NewCompiler(setup.ac)
 
-	if err := am.Write("client.wasm", []byte("wasm-bytes"), "application/wasm"); err != nil {
-		t.Fatalf("am.Write client.wasm failed: %v", err)
+	if err := am.Write("browser.wasm", []byte("wasm-bytes"), "application/wasm"); err != nil {
+		t.Fatalf("am.Write browser.wasm failed: %v", err)
 	}
 
 	r := newTestRouter(am)
 
-	ctx := &mock.Context{InPath: "/client.wasm", InMethod: "GET"}
-	r.Invoke("GET", "/client.wasm", ctx)
+	ctx := &mock.Context{InPath: "/browser.wasm", InMethod: "GET"}
+	r.Invoke("GET", "/browser.wasm", ctx)
 
 	if string(ctx.ResponseBody()) != "wasm-bytes" {
 		t.Errorf("expected 'wasm-bytes', got %q", string(ctx.ResponseBody()))
