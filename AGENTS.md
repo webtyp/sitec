@@ -1,145 +1,34 @@
 # AGENTS.md — `webtyp/sitec`
 
-Instrucciones obligatorias para cualquier agente que trabaje en este repositorio.
+<!-- webtyp:base — copied from devskills skill agents-md; do not edit here -->
+## Ecosystem rules — read before any change
 
-## Qué es este repo
+`docs/PLAN.md` is the spec: no design judgment; anything unclear is a question in the PR, not a guess.
 
-`sitec` es el **compilador de sitio**: toma un árbol de fuentes Go y produce la
-superficie estática desplegable — hoja de estilos, bundle de scripts, sprite SVG (dentro del HTML, nunca como archivo aparte),
-declaración de fuentes y shell HTML. Corre hasta terminar y sale.
+- Public API: typed (no `any`/`interface{}`), explicit, minimal; never export a symbol only a test uses.
+- One intent, one path: the old path is deleted in the same change. No silent fallback, `TODO`, commented code or stub.
+- Fail at compile time, else a loud diagnostic — never silently. Zero values deny.
+- A defect in a dependency is reported, never wrapped or patched here.
+- No string literals in logic: named constants. The same logic never lives in two repos.
+- `cmd/*/main.go`: parse flags, inject, print/exit only. stdout = data, stderr = logs, exit codes are the contract.
+- WASM code: `webtyp/fmt`, `webtyp/time`, `webtyp/json` instead of stdlib; no `map`; `dom.Element` embedded by value.
+- `css.go`, `svg.go`, `js.go`, `html.go` carry `//go:build !wasm`; no `ssr.go`, no `front.go`.
+- Code and keys in English; UI text is `lang.Text`, translations live in `lang.json`.
+- Tests cover behaviour and domain rules, never the look (CSS, colours, markup order, class strings). In `tests/` (external package), real stack with fakes only at the edge; run `gotest`.
+- Docs (`README.md`, `docs/*`) updated with the API; permanent docs never link `docs/PLAN.md`.
+- Before the PR: `git diff --stat main` lists every file of the plan's stages, and nothing the plan did not order is deleted.
+<!-- /webtyp:base -->
 
-Es un compilador, no un servidor ni un renderizador. El nombre sigue la
-convención del ecosistema para compiladores: `ormc`, `ddlc`, `sitec`.
+## This repo
 
-Se llamaba `webtyp/ssr`. Ese nombre describía una técnica que la librería no
-implementa: nada se renderiza server-side por petición; los productores corren
-una vez en build y el resultado es estático.
+`sitec` is the **site compiler**: it takes a Go source tree and emits the deployable static surface (`style.css`, `script.js`, inline SVG sprite inside `index.html`, fonts, `browser.wasm`, Web Workers, PWA manifest and service worker).
 
-## Los tests van en `tests/`; en la raíz solo con justificación
-
-```
-✅  tests/emit_fonts_test.go
-✅  tests/serve_http_test.go
-✅  tests/extract_test.go
-
-❌  tests_emit/fonts_test.go   (otra carpeta)
-❌  serve/serve_test.go        (junto al código)
-```
-
-**Regla del ecosistema** (skill **testing** → «Test location»): todo test vive en `tests/`
-(paquete externo, solo API pública). Un test queda en la raíz (`package sitec`) **solo** si
-necesita un identificador no exportado y el comportamiento no se puede observar desde la API
-pública; su primera línea lo justifica:
-`// Root-level test (justified): exercises <identificadores> — <por qué>.`
-**Nunca se exporta un símbolo para que un test lo alcance.** Verificable:
-
-```sh
-for f in *_test.go; do head -1 "$f" | grep -q "Root-level test (justified)" || echo "$f"; done
-# debe devolver vacío
-```
-
-### Para agrupar, prefijos — no carpetas
-
-`tests/` es un directorio plano. Los tests de una misma área se agrupan con un
-**prefijo en el nombre del archivo**, que es suficiente para ordenarlos
-alfabéticamente y encontrarlos:
-
-| Prefijo | Área |
-|---|---|
-| `emit_` | etapa `emit`: ensamblado, minificación, escritura |
-| `serve_` | subpaquete `serve`: exposición HTTP en modo desarrollo |
-| `extract_` | etapa `extract`: ejecución de los productores |
-| *(sin prefijo)* | pipeline y comportamiento general |
-
-Crear una subcarpeta dentro de `tests/` para "ordenar" está prohibido: fragmenta
-el paquete, obliga a duplicar los helpers y hace que `go test ./tests/` deje de
-cubrir todo.
-
-### Un solo paquete: `sitec_test`
-
-Todos los archivos de `tests/` declaran `package sitec_test`. Go exige un único
-paquete por directorio, y las pruebas son externas a propósito: ejercitan la API
-pública, que es la que consumen `app` y `goflare`.
-
-Si necesitas probar algo no exportado, **exponerlo o replantear el diseño** es la
-respuesta; no lo es crear un test interno en la raíz.
-
-### `testdata/`
-
-Los fixtures viven en `tests/testdata/`. Go ignora ese nombre al compilar, así
-que no interfiere con la regla anterior.
-
-## Reglas de código
-
-### Este repo es herramienta de backend
-
-`sitec` corre en la máquina del desarrollador y en CI, y maneja el toolchain de
-Go. Usa legítimamente la biblioteca estándar: `os`, `os/exec`, `encoding/json`,
-`go/ast`, `go/parser`, `sync`, `io`.
-
-**La regla del ecosistema de "nada de biblioteca estándar" NO aplica aquí** — esa
-regla es para código que se compila a WASM. No "arregles" esos imports.
-
-Para construir errores usa `webtyp.com/fmt` (`fmt.Err`), que es la
-convención del ecosistema.
-
-### Sin strings hardcodeados
-
-Todo string repetido —ruta por defecto, prefijo de log, mensaje de error, nombre
-de flag— es una constante con nombre en el paquete. Los literales están
-prohibidos en la lógica.
-
-### Sin carpetas `internal/`
-
-En este ecosistema una carpeta `internal/` señala un fork o una duplicación de
-una dependencia en vez de contribuir aguas arriba.
-
-### `cmd/` delgado
-
-`cmd/sitec/main.go` contiene **solo**: parseo de flags, inyección de
-dependencias, e imprimir/salir. Toda decisión es una función exportada de la
-librería, y por tanto testeable desde `tests/`.
-
-```go
-// ❌ prohibido: lógica dentro de cmd/
-func isProjectValid() bool { ... }
-
-// ✅ correcto: exportado en la librería
-func ValidateProject(dir string) error
-```
-
-### Contrato de ejecución del CLI
-
-Lo van a manejar un runner de CI y un LLM:
-
-- **Sin argumentos → ayuda por stdout, exit `0`.** Nunca bloquear en stdin ni en
-  una TUI.
-- **stdout = solo datos** (manifiesto JSON); **stderr = todos los logs**.
-- Exit `0` en éxito y en ayuda; distinto de cero ante flags inválidos o fallo del
-  pipeline.
-
-## Invariantes que no puedes romper
-
-Salieron de bugs reales, cada uno con su test. Si un cambio tuyo los toca, el
-test debe seguir en verde:
-
-1. **El alcance es la unión de los grafos de compilación** nativo y `js/wasm`.
-   Filtrar por un solo `GOOS` pierde en silencio el CSS de componentes que solo
-   importa el cliente.
-2. **El alcance se ancla en el directorio de arranque**, no en la raíz del
-   módulo. El arnés se arranca desde la raíz de lo que se prueba, que rara vez es
-   donde está el `go.mod`.
-3. **Un directorio `package main` nunca es un paquete del compilador**, en
-   cualquier módulo y con cualquier nombre de carpeta.
-4. **Si el sondeo del grafo falla, no se filtra.** Degradar abierto, nunca
-   cerrado. "Vacío" y "desconocido" son valores distintos.
-5. **Una extracción vacía es un fallo**, nunca un éxito silencioso: significa que
-   la aplicación se serviría sin CSS.
-6. **El modo por defecto es memoria.** Probar un componente no debe dejar un solo
-   archivo en disco. Comprobable: tras `webtyp -tui` en un componente,
-   `git status` de su repo queda limpio.
-
-## Plan vigente
-
-[docs/PLAN.md](docs/PLAN.md). En cola:
-[docs/PLAN_HTML_EN_APP.md](docs/PLAN_HTML_EN_APP.md).
+- **Backend tooling:** `sitec` runs on the developer host and in CI. Standard library packages (`os`, `os/exec`, `encoding/json`, `go/ast`, `go/parser`, `sync`, `io`, `strings`) are legitimate here; do NOT replace them with WASM-only wrappers. Use `webtyp.com/fmt` (`fmt.Err`) for error construction.
+- **Tests:** all tests in `tests/` (`package sitec_test`), grouped by filename prefix (`emit_`, `serve_`, `extract_`), never subdirectories. Root-level tests (`*_internal_test.go`) are permitted only with a first-line `// Root-level test (justified): exercises ...` comment when testing an unexported seam.
+- **Invariants:**
+  1. Reachable packages are the **union** of the native server graph and the `GOOS=js GOARCH=wasm -tags=browser` graph (`reach.go`).
+  2. Scope is anchored at the start directory, not `go.mod` root.
+  3. `package main` directories are never asset-producer packages.
+  4. If a reachability probe fails, degrade open (`partial: true`), never closed.
+  5. An empty extraction is an error, never a silent success.
+  6. Default mode is in-memory (`NewMemFS`).
