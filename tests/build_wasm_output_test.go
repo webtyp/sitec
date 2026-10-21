@@ -12,7 +12,7 @@ import (
 func TestRunWasmBuild_FailsIfInputMissing(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Run without web/client.go
+	// Run without web/browser.go
 	wb := sitec.NewDefaultWasmBuilder(true)
 	_, err := wb.Build(tmpDir)
 	if err == nil {
@@ -30,11 +30,11 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_Stdlib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create web/client.go
+	// Create web/browser.go
 	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "web", "client.go"), []byte("package main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -44,8 +44,8 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_Stdlib(t *testing.T) {
 		t.Fatalf("Build failed: %v", err)
 	}
 
-	if out.Filename != "client.wasm" {
-		t.Errorf("expected filename 'client.wasm', got %q", out.Filename)
+	if out.Filename != "browser.wasm" {
+		t.Errorf("expected filename 'browser.wasm', got %q", out.Filename)
 	}
 
 	if len(out.Binary) == 0 {
@@ -73,11 +73,11 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create web/client.go
+	// Create web/browser.go
 	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "web", "client.go"), []byte("package main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,8 +87,8 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
 		t.Fatalf("Build failed: %v", err)
 	}
 
-	if !strings.HasPrefix(out.Filename, "client.") || !strings.HasSuffix(out.Filename, ".wasm") {
-		t.Errorf("expected hashed filename 'client.<hash>.wasm', got %q", out.Filename)
+	if !strings.HasPrefix(out.Filename, "browser.") || !strings.HasSuffix(out.Filename, ".wasm") {
+		t.Errorf("expected hashed filename 'browser.<hash>.wasm', got %q", out.Filename)
 	}
 	if !strings.Contains(out.Runtime, `fetch("/`+out.Filename+`")`) {
 		t.Errorf("bootstrap does not load the hashed binary %q", out.Filename)
@@ -114,7 +114,7 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
 
 // TestWasmBuild_CustomEntryAndOutputName covers the non-frontend case: an edge
 // worker compiles main.go and must come out named for the platform that serves
-// it, not "client.wasm". Without this, a caller like webtyp/goflare cannot
+// it, not "browser.wasm". Without this, a caller like webtyp/goflare cannot
 // use this builder at all and has to keep its own copy of the compile step.
 func TestWasmBuild_CustomEntryAndOutputName(t *testing.T) {
 	tmpDir := t.TempDir()
@@ -152,8 +152,8 @@ func TestWasmBuild_DefaultsUnchanged(t *testing.T) {
 	tmpDir := t.TempDir()
 	wb := sitec.NewWasmBuilder(true, sitec.WasmBuildOptions{})
 	_, err := wb.Build(tmpDir)
-	if err == nil || !strings.Contains(err.Error(), "web/client.go") {
-		t.Errorf("zero options should still look for web/client.go, got: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "web/browser.go") {
+		t.Errorf("zero options should still look for web/browser.go, got: %v", err)
 	}
 }
 
@@ -171,7 +171,7 @@ func TestWasmBuild_RelativeDirResolvesEntry(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(projectDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "web", "client.go"), []byte("package main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -237,5 +237,44 @@ func TestWasmbuild_NewWasmBuilderTinyGoKeepsFixedName(t *testing.T) {
 	}
 	if out.Filename != "edge.wasm" {
 		t.Errorf("Filename = %q, want %q", out.Filename, "edge.wasm")
+	}
+}
+
+func TestWasmBuild_CoexistingBrowserAndEdgeInWebDir(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "web", "edge.go"), []byte("//go:build wasm && !browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	wb1 := sitec.NewDefaultWasmBuilder(true)
+	out1, err := wb1.Build(tmpDir)
+	if err != nil {
+		t.Fatalf("Build browser failed: %v", err)
+	}
+	if out1.Filename != "browser.wasm" {
+		t.Errorf("expected filename 'browser.wasm', got %q", out1.Filename)
+	}
+
+	wb2 := sitec.NewWasmBuilder(true, sitec.WasmBuildOptions{
+		Entry:      "web/edge.go",
+		OutputName: "edge",
+	})
+	out2, err := wb2.Build(tmpDir)
+	if err != nil {
+		t.Fatalf("Build edge failed: %v", err)
+	}
+	if out2.Filename != "edge.wasm" {
+		t.Errorf("expected filename 'edge.wasm', got %q", out2.Filename)
 	}
 }

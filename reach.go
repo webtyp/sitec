@@ -70,7 +70,7 @@ func goListDeps(rootDir, pattern, goos, goarch string) ([]string, error) {
 	var data []byte
 	var err error
 	if len(env) > 0 {
-		data, err = tc.ListEnv(rootDir, env, "-e", "-deps", pattern)
+		data, err = tc.ListEnv(rootDir, env, "-e", "-tags="+browserBuildTag, "-deps", pattern)
 	} else {
 		data, err = tc.List(rootDir, "-e", "-deps", pattern)
 	}

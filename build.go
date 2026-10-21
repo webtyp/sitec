@@ -364,7 +364,7 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		e.SetAssetLibraries(cfg.AssetLibraries)
 	}
 
-	if _, err := os.Stat(filepath.Join(root, "web", "client.go")); err == nil {
+	if _, err := os.Stat(filepath.Join(root, "web", defaultBrowserEntryFile)); err == nil {
 		e.SetWasmBuilder(NewDefaultWasmBuilder(cfg.Mode == ModeDev))
 	}
 

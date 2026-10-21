@@ -27,7 +27,7 @@ import (
 //      modo memoria el fallback c.fs.Read("script.js") tampoco lo encuentra.
 //
 // Resultado: Read("/script.js") y Read("/style.css") devuelven ok=false. El
-// navegador descarga client.wasm y nunca lo instancia (falta el bootstrap);
+// navegador descarga browser.wasm y nunca lo instancia (falta el bootstrap);
 // #app queda en blanco. index.html se salva porque su urlPath es "/" fijo y
 // RouteExtractedAssets no lo toca.
 //
