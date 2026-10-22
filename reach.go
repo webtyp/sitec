@@ -19,6 +19,11 @@ import (
 const skippedUnreachableSummaryFmt = "sitec: %d package(s) skipped — they declare assets but are not in the ./... build graph; " +
 	"their styles and icons will NOT ship: %s"
 
+// unreachableButImportedFmt reports a reachability probe that contradicts the
+// extractor: a kept package's asset file imports a package the probe skipped.
+const unreachableButImportedFmt = "sitec: package %s was skipped as unreachable, but %s imports it from an asset file that the extractor compiles; " +
+	"the reachability probe is missing a build configuration (see buildTargets and destinationTags in reach.go)"
+
 // reachabilityProbeFailedFmt reports a single build-target probe failure
 // (e.g. `go list -deps ./...` for GOOS=js GOARCH=wasm). Logged only when
 // verbose, since a probe failure is common on a cold module cache and

@@ -4,6 +4,7 @@ package sitec_test
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -249,17 +250,11 @@ func (b *Beta) RenderCSS() stylesheet { return ".beta{color:blue}" }
 	}
 }
 
-// TestExtractAll_PackageImportedOnlyByBrowserMainShips covers a module repo
-// whose only consumer of the UI is web/browser.go (//go:build browser): the
-// js/wasm reachability probe must list ./... with -tags=browser, or every
-// package that main imports is reported "not in the build graph" and
-// style.css is served empty. Since css.go files are native-only (!wasm),
-// the native probe must also carry -tags=browser: that is how webtyp.com/css
-// is reached from a browser-only UI.
-func TestExtractAll_PackageImportedOnlyByBrowserMainShips(t *testing.T) {
+func setupBrowserOnlyProject(t *testing.T) (appDir, depDir string, finder fakeModules) {
+	t.Helper()
 	base := t.TempDir()
-	appDir := filepath.Join(base, "app")
-	depDir := filepath.Join(base, "dep")
+	appDir = filepath.Join(base, "app")
+	depDir = filepath.Join(base, "dep")
 	writeTree(t, depDir, map[string]string{
 		"go.mod": "module example.com/dep\n\ngo 1.24\n",
 		"shell/shell.go": "package shell\n",
@@ -304,12 +299,26 @@ func main() {}
 `,
 	})
 
-	e := sitec.New(appDir)
-	e.SetLog(t.Log)
-	e.SetFinder(fakeModules([]modfind.Module{
+	finder = fakeModules([]modfind.Module{
 		{Path: "example.com/app", Dir: appDir, IsMain: true},
 		{Path: "example.com/dep", Dir: depDir},
-	}))
+	})
+	return appDir, depDir, finder
+}
+
+// TestExtractAll_PackageImportedOnlyByBrowserMainShips covers a module repo
+// whose only consumer of the UI is web/browser.go (//go:build browser): the
+// js/wasm reachability probe must list ./... with -tags=browser, or every
+// package that main imports is reported "not in the build graph" and
+// style.css is served empty. Since css.go files are native-only (!wasm),
+// the native probe must also carry -tags=browser: that is how webtyp.com/css
+// is reached from a browser-only UI.
+func TestExtractAll_PackageImportedOnlyByBrowserMainShips(t *testing.T) {
+	appDir, _, finder := setupBrowserOnlyProject(t)
+
+	e := sitec.New(appDir)
+	e.SetLog(t.Log)
+	e.SetFinder(finder)
 
 	all, err := e.ExtractAll()
 	if err != nil {
@@ -324,5 +333,41 @@ func main() {}
 	}
 	if !strings.Contains(css.String(), ".theme{color:blue}") {
 		t.Errorf("CSS of a package reached only through a native css.go of a browser-only import was dropped as unreachable.\n  got: %q", css.String())
+	}
+}
+
+func TestExtractAll_ProbeMissingConfigurationFailsLoudly(t *testing.T) {
+	appDir, _, finder := setupBrowserOnlyProject(t)
+
+	e := sitec.New(appDir)
+	e.SetLog(t.Log)
+	e.SetFinder(finder)
+
+	lister := func(rootDir, pattern, goos, goarch string) ([]string, error) {
+		args := []string{"list", "-e", "-deps"}
+		cmd := exec.Command("go")
+		cmd.Dir = rootDir
+		cmd.Env = os.Environ()
+		if goos != "" {
+			args = append(args, "-tags=browser")
+			cmd.Env = append(cmd.Env, "GOOS="+goos, "GOARCH="+goarch)
+		}
+		cmd.Args = append([]string{"go"}, append(args, pattern)...)
+		out, err := cmd.Output()
+		if err != nil {
+			return nil, err
+		}
+		return strings.Fields(string(out)), nil
+	}
+	e.SetGraphLister(lister)
+
+	_, err := e.ExtractAll()
+	if err == nil {
+		t.Fatalf("expected ExtractAll to fail loudly due to probe missing configuration")
+	}
+
+	errMsg := err.Error()
+	if !strings.Contains(errMsg, "example.com/dep/theme") || !strings.Contains(errMsg, "example.com/dep/shell") {
+		t.Errorf("expected error to name both example.com/dep/theme and example.com/dep/shell, got: %v", errMsg)
 	}
 }
