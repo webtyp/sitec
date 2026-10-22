@@ -12,7 +12,7 @@ import (
 func TestRunWasmBuild_FailsIfInputMissing(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	// Run without web/browser.go
+	// Run without web/browser/main.go
 	wb := sitec.NewDefaultWasmBuilder(true)
 	_, err := wb.Build(tmpDir)
 	if err == nil {
@@ -30,11 +30,11 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_Stdlib(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create web/browser.go
-	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
+	// Create web/browser/main.go
+	if err := os.MkdirAll(filepath.Join(tmpDir, "web/browser"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "web/browser", "main.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -73,11 +73,11 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create web/browser.go
-	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
+	// Create web/browser/main.go
+	if err := os.MkdirAll(filepath.Join(tmpDir, "web/browser"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "web/browser", "main.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,8 +152,27 @@ func TestWasmBuild_DefaultsUnchanged(t *testing.T) {
 	tmpDir := t.TempDir()
 	wb := sitec.NewWasmBuilder(true, sitec.WasmBuildOptions{})
 	_, err := wb.Build(tmpDir)
-	if err == nil || !strings.Contains(err.Error(), "web/browser.go") {
-		t.Errorf("zero options should still look for web/browser.go, got: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "web/browser/main.go") {
+		t.Errorf("zero options should still look for web/browser/main.go, got: %v", err)
+	}
+}
+
+func TestBuild_LegacyBrowserGoIsNotAnEntry(t *testing.T) {
+	tmpDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("package main\nfunc main(){}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	wb := sitec.NewWasmBuilder(true, sitec.WasmBuildOptions{})
+	_, err := wb.Build(tmpDir)
+	if err == nil {
+		t.Error("expected error when legacy file is present but new one is not, got nil")
+	}
+	if err != nil && (!strings.Contains(err.Error(), "input file not found") || !strings.Contains(err.Error(), "web/browser/main.go")) {
+		t.Errorf("expected error mentioning input file not found and web/browser/main.go, got: %v", err)
 	}
 }
 
@@ -165,13 +184,13 @@ func TestWasmBuild_RelativeDirResolvesEntry(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	const projectDir = "proj"
-	if err := os.MkdirAll(filepath.Join(projectDir, "web"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(projectDir, "web/browser"), 0755); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(projectDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(projectDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(projectDir, "web/browser", "main.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -247,10 +266,10 @@ func TestWasmBuild_CoexistingBrowserAndEdgeInWebDir(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := os.MkdirAll(filepath.Join(tmpDir, "web"), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(tmpDir, "web/browser"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "web", "browser.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "web/browser", "main.go"), []byte("//go:build browser\n\npackage main\nfunc main() {}"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(tmpDir, "web", "edge.go"), []byte("//go:build wasm && !browser\n\npackage main\nfunc main() {}"), 0644); err != nil {

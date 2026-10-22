@@ -120,7 +120,7 @@ set, so an unchanged project does not recompile.
 - The probe is the union of `go list -e -deps ./...` over `buildTargets` (native, `js/wasm`) ×
   `destinationTags` (none, `browser`). Why both tags on native: asset files are `!wasm`, and the
   packages they import are reachable only from the native graph with the destination tag of the
-  binary that imports them (`web/browser.go`).
+  binary that imports them (`web/browser/main.go`).
 - Self-check: a skipped package imported by an asset file of a kept package is an error
   (`unreachableButImportedFmt`) — the probe and the extractor must agree.
 
