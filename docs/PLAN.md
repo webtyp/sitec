@@ -2,8 +2,10 @@
 PLAN: "feat!: the browser main is web/browser/main.go (one main per folder)"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 8284510115111700650
+PR: https://github.com/webtyp/sitec/pull/32
+REVIEWED_COMMIT: 8cf4df20419a6607678c3b9386fb887fca81519a
 ---
 
 > Read AGENTS.md at the repo root before any change.
