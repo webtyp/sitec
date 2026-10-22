@@ -2,6 +2,8 @@
 PLAN: "feat!: the browser main is web/browser/main.go (one main per folder)"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 8284510115111700650
 ---
 
 > Read AGENTS.md at the repo root before any change.
