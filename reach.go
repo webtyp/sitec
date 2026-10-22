@@ -63,7 +63,7 @@ type reachability struct {
 
 // destinationTags are the build-tag sets probed for every platform. The
 // destination axis (browser) is orthogonal to the platform axis (GOOS):
-// web/browser.go is `browser`, while the css.go files of the packages it
+// web/browser/main.go is built with -tags browser, while the css.go files of the packages it
 // imports are `!wasm` — so webtyp.com/css is only reached by the NATIVE graph
 // WITH -tags=browser, and the js/wasm graph without the tag is edge.wasm.
 var destinationTags = []string{"", browserBuildTag}

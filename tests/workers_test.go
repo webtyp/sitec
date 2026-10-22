@@ -46,7 +46,7 @@ require (
 		return "replace webtyp.com/sitec => " + filepath.Dir(wcwd) + "\n" + repls
 	}())
 
-	write(filepath.Join(root, "web/browser.go"), "//go:build browser\n\npackage main\nfunc main() {}")
+	write(filepath.Join(root, "web/browser/main.go"), "//go:build browser\n\npackage main\nfunc main() {}")
 	write(filepath.Join(root, "html.go"), `//go:build !wasm
 
 package app

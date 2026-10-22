@@ -12,20 +12,22 @@ import (
 )
 
 const (
-	defaultBrowserEntryFile = "browser.go"
-	defaultBrowserOutput    = "browser.wasm"
-	browserBuildTag         = "browser"
+	// defaultBrowserEntry is the browser main, relative to the project root: one
+	// main per folder, the folder is the binary.
+	defaultBrowserEntry  = "web/browser/main.go"
+	defaultBrowserOutput = "browser.wasm"
+	browserBuildTag      = "browser"
 )
 
 // WasmBuildOptions selects what to compile and what to call the result.
 //
-// The zero value builds a site frontend: web/browser.go → browser.wasm. Set the
+// The zero value builds a site frontend: web/browser/main.go → browser.wasm. Set the
 // fields to compile something else — an edge worker entry point, for example,
 // which is main.go and must come out named for the platform that serves it.
 type WasmBuildOptions struct {
 	// Entry is the input file relative to the directory passed to Build, used to
 	// locate the package directory to compile and verify its existence.
-	// Empty means "web/browser.go".
+	// Empty means "web/browser/main.go".
 	Entry string
 	// OutputName is the artifact name without the .wasm extension.
 	// Empty means "browser".
@@ -42,7 +44,7 @@ type WasmBuildOptions struct {
 
 func (o WasmBuildOptions) entry() string {
 	if o.Entry == "" {
-		return filepath.Join("web", defaultBrowserEntryFile)
+		return filepath.FromSlash(defaultBrowserEntry)
 	}
 	return o.Entry
 }
@@ -60,7 +62,7 @@ type defaultWasmBuilder struct {
 	opts     WasmBuildOptions
 }
 
-// NewDefaultWasmBuilder builds a site frontend from web/browser.go.
+// NewDefaultWasmBuilder builds a site frontend from web/browser/main.go.
 // In release (devMode false) the binary is named by its content hash (browser.<hash>.wasm) and
 // the page bootstrap loads that name.
 func NewDefaultWasmBuilder(devMode bool) WasmBuilder {
@@ -117,7 +119,7 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	// (el directorio) en vez de un archivo suelto. Esto permite que el paquete
 	// tenga archivos hermanos (ej: main.go y access.go).
 	var cmd *exec.Cmd
-	isBrowser := filepath.Base(entry) == defaultBrowserEntryFile
+	isBrowser := filepath.Clean(entry) == filepath.FromSlash(defaultBrowserEntry)
 	if !w.stdlib {
 		args := []string{"build"}
 

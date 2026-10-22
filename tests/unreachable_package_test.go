@@ -289,7 +289,7 @@ require example.com/dep v0.0.0
 replace example.com/dep => ../dep
 `,
 		"module.go": "package app\n",
-		"web/browser.go": `//go:build browser
+		"web/browser/main.go": `//go:build browser
 
 package main
 
@@ -307,7 +307,7 @@ func main() {}
 }
 
 // TestExtractAll_PackageImportedOnlyByBrowserMainShips covers a module repo
-// whose only consumer of the UI is web/browser.go (//go:build browser): the
+// whose only consumer of the UI is web/browser/main.go (//go:build browser): the
 // js/wasm reachability probe must list ./... with -tags=browser, or every
 // package that main imports is reported "not in the build graph" and
 // style.css is served empty. Since css.go files are native-only (!wasm),
