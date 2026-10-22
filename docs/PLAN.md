@@ -2,8 +2,10 @@
 PLAN: "fix: fail loudly when an asset file of a reachable package imports a package the reachability probe skipped"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 15836594489846526342
+PR: https://github.com/webtyp/sitec/pull/31
+REVIEWED_COMMIT: ad8c1f62237daf8af6b92eb268173b2c0d7b22f6
 ---
 
 > Read AGENTS.md at the repo root before any change.
