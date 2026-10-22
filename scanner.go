@@ -142,9 +142,12 @@ func (s *scanner) scanFile(path string) (fileFeatures, error) {
 }
 
 type packageFeatures struct {
-	PkgName   string
-	Imports   map[string]bool
-	Producers []producerDecl
+	PkgName         string
+	Imports         map[string]bool
+	// ProducerImports is the union of the imports of the files that declare
+	// at least one producer: exactly the files the generated extractor compiles.
+	ProducerImports map[string]bool
+	Producers       []producerDecl
 }
 
 func (s *scanner) scanPackage(dir string) (packageFeatures, error) {
@@ -157,7 +160,8 @@ func (s *scanner) scanPackage(dir string) (packageFeatures, error) {
 	}
 
 	agg := packageFeatures{
-		Imports: make(map[string]bool),
+		Imports:         make(map[string]bool),
+		ProducerImports: make(map[string]bool),
 	}
 
 	for _, entry := range entries {
@@ -172,6 +176,11 @@ func (s *scanner) scanPackage(dir string) (packageFeatures, error) {
 			}
 			for imp := range feats.imports {
 				agg.Imports[imp] = true
+			}
+			if len(feats.producers) > 0 {
+				for imp := range feats.imports {
+					agg.ProducerImports[imp] = true
+				}
 			}
 			agg.Producers = append(agg.Producers, feats.producers...)
 		}
