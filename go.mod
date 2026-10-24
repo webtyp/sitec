@@ -9,12 +9,12 @@ require (
 	webtyp.com/dom v0.13.28
 	webtyp.com/fmt v1.0.0
 	webtyp.com/font v0.0.5
-	webtyp.com/html v0.0.27
+	webtyp.com/html v0.0.29
 	webtyp.com/image v0.1.16
 	webtyp.com/js v0.1.0
-	webtyp.com/lang v0.1.7
+	webtyp.com/lang v0.1.9
 	webtyp.com/modfind v0.0.11
-	webtyp.com/pwa v0.2.0
+	webtyp.com/pwa v0.2.13
 	webtyp.com/router v0.4.6
 	webtyp.com/svg v0.3.30
 	webtyp.com/tinygo v1.0.1
