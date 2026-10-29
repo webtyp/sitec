@@ -256,7 +256,7 @@ func setupBrowserOnlyProject(t *testing.T) (appDir, depDir string, finder fakeMo
 	appDir = filepath.Join(base, "app")
 	depDir = filepath.Join(base, "dep")
 	writeTree(t, depDir, map[string]string{
-		"go.mod": "module example.com/dep\n\ngo 1.24\n",
+		"go.mod":         "module example.com/dep\n\ngo 1.24\n",
 		"shell/shell.go": "package shell\n",
 		// css.go is native-only (!wasm) and is the sole importer of theme, so
 		// theme is reachable only from the native graph WITH -tags=browser.
@@ -336,7 +336,11 @@ func TestExtractAll_PackageImportedOnlyByBrowserMainShips(t *testing.T) {
 	}
 }
 
-func TestExtractAll_ProbeMissingConfigurationFailsLoudly(t *testing.T) {
+// TestExtractAll_ProbeMissingTagStillShipsAssetImports: a probe that misses
+// -tags=browser on the native graph never sees dep/theme, but dep/shell's css.go
+// imports it and the extractor compiles that file natively, so theme is
+// reachable all the same and both stylesheets ship.
+func TestExtractAll_ProbeMissingTagStillShipsAssetImports(t *testing.T) {
 	appDir, _, finder := setupBrowserOnlyProject(t)
 
 	e := sitec.New(appDir)
@@ -361,13 +365,17 @@ func TestExtractAll_ProbeMissingConfigurationFailsLoudly(t *testing.T) {
 	}
 	e.SetGraphLister(lister)
 
-	_, err := e.ExtractAll()
-	if err == nil {
-		t.Fatalf("expected ExtractAll to fail loudly due to probe missing configuration")
+	all, err := e.ExtractAll()
+	if err != nil {
+		t.Fatalf("ExtractAll: %v", err)
 	}
-
-	errMsg := err.Error()
-	if !strings.Contains(errMsg, "example.com/dep/theme") || !strings.Contains(errMsg, "example.com/dep/shell") {
-		t.Errorf("expected error to name both example.com/dep/theme and example.com/dep/shell, got: %v", errMsg)
+	var css strings.Builder
+	for _, a := range all {
+		css.WriteString(a.CSS)
+	}
+	for _, want := range []string{".shell{color:red}", ".theme{color:blue}"} {
+		if !strings.Contains(css.String(), want) {
+			t.Errorf("style.css lacks %q\n  got: %q", want, css.String())
+		}
 	}
 }

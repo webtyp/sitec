@@ -19,11 +19,6 @@ import (
 const skippedUnreachableSummaryFmt = "sitec: %d package(s) skipped — they declare assets but are not in the ./... build graph; " +
 	"their styles and icons will NOT ship: %s"
 
-// unreachableButImportedFmt reports a reachability probe that contradicts the
-// extractor: a kept package's asset file imports a package the probe skipped.
-const unreachableButImportedFmt = "sitec: package %s was skipped as unreachable, but %s imports it from an asset file that the extractor compiles; " +
-	"the reachability probe is missing a build configuration (see buildTargets and destinationTags in reach.go)"
-
 // reachabilityProbeFailedFmt reports a single build-target probe failure
 // (e.g. `go list -deps ./...` for GOOS=js GOARCH=wasm). Logged only when
 // verbose, since a probe failure is common on a cold module cache and
@@ -121,6 +116,41 @@ func listDeps(tc Toolchain, rootDir, pattern, goos, goarch, tags string) ([]stri
 		}
 	}
 	return out, nil
+}
+
+// closeOverAssetImports adds to the set every package that an asset file of a
+// reachable package imports, until nothing changes. The extractor compiles
+// those files natively, so their imports are in its build even when no probe
+// sees them: web/browser/main.go is `wasm`-only and css.go is `!wasm`, so a
+// component reached only from the browser shows up in the js/wasm graph
+// without its css.go, and in no graph with it (components/targetlist →
+// components/listgap). Without this the package was skipped, the generated
+// extractor did not compile, and the app shipped no style.css.
+func (r reachability) closeOverAssetImports(pkgs []module, scan func(dir string) (packageFeatures, error)) error {
+	if !r.known || r.partial {
+		return nil
+	}
+	scanned := make(map[string]bool)
+	for changed := true; changed; {
+		changed = false
+		for _, m := range pkgs {
+			if m.dir == "" || scanned[m.path] || !r.set[m.path] {
+				continue
+			}
+			scanned[m.path] = true
+			feats, err := scan(m.dir)
+			if err != nil {
+				return err
+			}
+			for imp := range feats.ProducerImports {
+				if !r.set[imp] {
+					r.set[imp] = true
+					changed = true
+				}
+			}
+		}
+	}
+	return nil
 }
 
 // computeReachability computes the union of reachable packages across every

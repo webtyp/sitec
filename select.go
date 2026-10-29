@@ -146,24 +146,21 @@ func aliasFor(path string, used map[string]string) string {
 	}
 }
 
-type keptPkg struct {
-	path    string
-	imports map[string]bool
-}
-
 func modulesToAliases(modules []module, scanner *scanner, assetLibraries []string, rootDir string, lister GraphLister, log func(...any), verbose bool) ([]moduleAlias, error) {
 	var reachLog func(...any)
 	if verbose {
 		reachLog = log
 	}
 	reach := computeReachability(rootDir, lister, reachLog)
+	pkgs := expandToSSRPackages(modules, scanner, assetLibraries)
+	if err := reach.closeOverAssetImports(pkgs, scanner.scanPackage); err != nil {
+		return nil, err
+	}
 
 	var skipped []string
-	skippedSet := make(map[string]bool)
 	var aliases []moduleAlias
-	var kept []keptPkg
 	aliasByCandidate := make(map[string]string)
-	for _, m := range expandToSSRPackages(modules, scanner, assetLibraries) {
+	for _, m := range pkgs {
 		// reach.partial: at least one build target's probe failed, so the
 		// reachable set is incomplete. Filtering on incomplete data risks
 		// excluding a package that IS reachable — silently dropping its
@@ -172,7 +169,6 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 		// (usually) a warm module cache.
 		if reach.known && !reach.partial && !reach.set[m.path] {
 			skipped = append(skipped, m.path)
-			skippedSet[m.path] = true
 			continue
 		}
 
@@ -261,23 +257,9 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 			}
 
 			ma.Receivers = receivers
-			kept = append(kept, keptPkg{m.path, feats.ProducerImports})
 		}
 
 		aliases = append(aliases, ma)
-	}
-
-	for _, k := range kept {
-		var imps []string
-		for imp := range k.imports {
-			imps = append(imps, imp)
-		}
-		sort.Strings(imps)
-		for _, imp := range imps {
-			if skippedSet[imp] {
-				return nil, fmt.Errorf(unreachableButImportedFmt, imp, k.path)
-			}
-		}
 	}
 
 	if log != nil && verbose && len(skipped) > 0 {
