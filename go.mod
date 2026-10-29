@@ -15,7 +15,7 @@ require (
 	webtyp.com/lang v0.1.9
 	webtyp.com/modfind v0.0.11
 	webtyp.com/pwa v0.2.13
-	webtyp.com/router v0.4.6
+	webtyp.com/router v0.4.15
 	webtyp.com/svg v0.3.30
 	webtyp.com/tinygo v1.0.1
 )
@@ -33,5 +33,5 @@ require (
 	webtyp.com/fetch v0.1.28 // indirect
 	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/json v0.5.37 // indirect
-	webtyp.com/model v0.2.11 // indirect
+	webtyp.com/model v0.2.12 // indirect
 )
