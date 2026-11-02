@@ -107,6 +107,13 @@ func (c *Compiler) NewFileEvent(fileName, extension, filePath, event string) err
 
 	ssr := c.isSSRMode()
 	if ssr {
+		// "scan" is the watcher registering a file that already exists at
+		// startup, not an edit: the initial module scan already read it.
+		// Reloading here re-ran the module and the dictionary sync once per
+		// existing .css/.js/.svg/.html file.
+		if event == "scan" {
+			return nil
+		}
 		switch extension {
 		case ".css", ".js", ".svg", ".html":
 			dir := filepath.Dir(filePath)

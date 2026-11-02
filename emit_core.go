@@ -67,12 +67,6 @@ func msgSiteWithoutPages() string {
 		"not", "a", "site").String()
 }
 
-func msgPagesWithoutSite() string {
-	return lang.Translate(msgPrefix, "warning:", "the", "project", "declares", "RenderPages()",
-		"but", "not", "RenderSite():", "the", "output", "will", "have", "no", "sitemap",
-		"and", "no", "static", "assets").String()
-}
-
 func msgStaticAbsent(path string) string {
 	return lang.Translate(msgPrefix, "static", "asset", "declared", "and", "missing:", path).String()
 }
@@ -149,6 +143,7 @@ type Compiler struct {
 	translations        Translations // nil: no dictionary is inlined (English)
 	translationsHTML    string       // the <script id="webtyp-lang"> element, inlined in index.html
 	translationsLastErr string       // last reported error, so a persisting one is logged once
+	scanned             bool         // a full module scan landed: from here on a module reload syncs the dictionary itself
 }
 
 func (c *Compiler) SetFS(fs FS) {
@@ -320,6 +315,9 @@ func (c *Compiler) RouteExtractedAssets(all []*Assets) error {
 		// After every successful module scan, whoever drove it (LoadSSRModules,
 		// the one-shot build, or app's own retry loop): keep config/lang.json in
 		// step with the code and re-inline the dictionary.
+		c.translationsMu.Lock()
+		c.scanned = true
+		c.translationsMu.Unlock()
 		c.refreshTranslations(true)
 	}
 	return err
@@ -549,13 +547,10 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 	// 3.5 Diagnóstico del dueño de index.html. Con RenderSite() la intención
 	// ya es explícita, así que se puede exigir: sin páginas, la salida sería
 	// el shell de una aplicación —publicar eso sin un solo error es lo que
-	// este check elimina. A la inversa, páginas sin RenderSite() significan
-	// un sitio que saldrá sin sitemap ni activos estáticos: aviso, no error.
+	// este check elimina. Páginas sin RenderSite() es una aplicación con
+	// pantallas propias (build.go): estado legal, sin aviso.
 	if c.site != nil && len(pageOwners) == 0 {
 		return fmt.Err(msgSiteWithoutPages())
-	}
-	if c.site == nil && len(pageOwners) > 0 {
-		c.Logger(msgPagesWithoutSite())
 	}
 
 	// 4. Emit sitemap.xml if SiteURL is set
@@ -603,7 +598,13 @@ func (c *Compiler) ReloadSSRModule(moduleDir string) error {
 	}
 	c.mu.Unlock()
 	if err == nil {
-		c.refreshTranslations(true)
+		// Before the first full scan a module reload does not sync: the scan
+		// that follows syncs once with every module (two syncs at startup
+		// otherwise, each one repeating the same diagnostics).
+		c.translationsMu.RLock()
+		scanned := c.scanned
+		c.translationsMu.RUnlock()
+		c.refreshTranslations(scanned)
 	}
 	return err
 }

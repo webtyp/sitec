@@ -62,10 +62,10 @@ func TestSiteAusenteEnProyectoConPages(t *testing.T) {
 		t.Fatalf("RenderPages() sin RenderSite() no debe fallar el build: %v", err)
 	}
 
+	// Una aplicación con páginas propias y sin RenderSite() es legal: no avisa.
 	for _, l := range logs {
 		if strings.Contains(l, "RenderPages") && strings.Contains(l, "RenderSite") {
-			return
+			t.Errorf("RenderPages() sin RenderSite() no debe avisar, logs: %v", logs)
 		}
 	}
-	t.Errorf("esperado aviso msgPagesWithoutSite, logs: %v", logs)
 }

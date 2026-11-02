@@ -161,3 +161,49 @@ func TestTranslations_NoProviderNoElement(t *testing.T) {
 		t.Errorf("without SetTranslations no dictionary is inlined, got:\n%s", got)
 	}
 }
+
+// rootExtractor returns one fixed module for every extraction.
+type rootExtractor struct{}
+
+func (rootExtractor) ExtractModule(string) (*sitec.Assets, error) {
+	return &sitec.Assets{ModuleName: "root", IsRoot: true}, nil
+}
+
+func (rootExtractor) ExtractAll() ([]*sitec.Assets, error) {
+	return []*sitec.Assets{{ModuleName: "root", IsRoot: true}}, nil
+}
+
+// TestTranslations_SyncOncePerStartup walks the app's startup order: the
+// synchronous root reload, the full scan, then the watcher registering the
+// files that already exist ("scan" events). The dictionary is synced once —
+// each extra sync repeated every lang diagnostic in the TUI.
+func TestTranslations_SyncOncePerStartup(t *testing.T) {
+	c, _ := newTranslationsCompiler(t)
+	f := &fakeTranslations{html: langElement}
+	c.SetTranslations(f)
+	c.SetSSRExtractor(rootExtractor{})
+	c.EnableSSRMode()
+
+	if err := c.ReloadSSRModule("/p"); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.RouteExtractedAssets(nil); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"style.css", "main.js", "icons.svg", "index.html"} {
+		if err := c.NewFileEvent(name, name[strings.LastIndex(name, "."):], "/p/docs/"+name, "scan"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if f.syncs != 1 {
+		t.Errorf("SyncTranslations calls at startup = %d, want 1", f.syncs)
+	}
+
+	// A real edit after startup still reloads its module and syncs.
+	if err := c.ReloadSSRModule("/p"); err != nil {
+		t.Fatal(err)
+	}
+	if f.syncs != 2 {
+		t.Errorf("a module reload after the scan must sync: calls = %d, want 2", f.syncs)
+	}
+}
