@@ -24,6 +24,7 @@ type fileFeatures struct {
 	pkgName   string // f.Name.Name del archivo parseado
 	imports   map[string]bool
 	producers []producerDecl
+	vars      []string
 }
 
 type scanner struct {
@@ -104,7 +105,21 @@ func (s *scanner) scanFile(path string) (fileFeatures, error) {
 		"ArtifactSources": true,
 	}
 
+	var vars []string
 	for _, decl := range f.Decls {
+		if genDecl, ok := decl.(*ast.GenDecl); ok && genDecl.Tok == token.VAR {
+			for _, spec := range genDecl.Specs {
+				if vs, ok := spec.(*ast.ValueSpec); ok {
+					for _, name := range vs.Names {
+						if ast.IsExported(name.Name) {
+							vars = append(vars, name.Name)
+						}
+					}
+				}
+			}
+			continue
+		}
+
 		fn, ok := decl.(*ast.FuncDecl)
 		if !ok {
 			continue
@@ -132,6 +147,7 @@ func (s *scanner) scanFile(path string) (fileFeatures, error) {
 		pkgName:   f.Name.Name,
 		imports:   imports,
 		producers: producers,
+		vars:      vars,
 	}
 
 	s.mu.Lock()
@@ -148,6 +164,7 @@ type packageFeatures struct {
 	// at least one producer: exactly the files the generated extractor compiles.
 	ProducerImports map[string]bool
 	Producers       []producerDecl
+	Vars            []string
 }
 
 func (s *scanner) scanPackage(dir string) (packageFeatures, error) {
@@ -177,12 +194,13 @@ func (s *scanner) scanPackage(dir string) (packageFeatures, error) {
 			for imp := range feats.imports {
 				agg.Imports[imp] = true
 			}
-			if len(feats.producers) > 0 {
+			if len(feats.producers) > 0 || len(feats.vars) > 0 {
 				for imp := range feats.imports {
 					agg.ProducerImports[imp] = true
 				}
 			}
 			agg.Producers = append(agg.Producers, feats.producers...)
+			agg.Vars = append(agg.Vars, feats.vars...)
 		}
 	}
 

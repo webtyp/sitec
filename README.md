@@ -16,6 +16,16 @@ sitec check        # valida sin escribir nada (puerta de CI)
 
 stdout entrega datos (manifiesto JSON); stderr entrega logs.
 
+## Productores
+
+`sitec` descubre funciones y métodos en los paquetes Go que devuelven los activos del sitio, como `RenderPages() []html.Page` y `RootCSS() *css.Stylesheet`.
+También inspecciona las variables exportadas del paquete si sus valores implementan las interfaces de productores de páginas o shell (como `RenderPages()` o `RenderHTML()`), de modo que las variables de configuración de la app pueden renderizar páginas directamente.
+
+```go
+// config/brand.go — sitec calls RenderPages and RenderHTML on the value
+var Brand = appkit.Brand{Name: "Acme", LogoMark: logo}
+```
+
 ## Uso programático (Build de producción)
 
 Para compilar y emitir la superficie estática desplegable en un pipeline de producción sin depender del demonio de desarrollo:

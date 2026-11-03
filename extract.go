@@ -73,10 +73,11 @@ type moduleAlias struct {
 	Path      string
 	Alias     string
 	Receivers []receiverFeature
+	Vars      []string
 }
 
 func (m moduleAlias) HasAnyFeature() bool {
-	return len(m.Receivers) > 0
+	return len(m.Receivers) > 0 || len(m.Vars) > 0
 }
 
 // invokeSSRExtractorOnce generates a combined main.go, runs it once, and returns the aggregated output.
@@ -317,6 +318,21 @@ func main() {
 			{{end}}
 		}()
 		{{end}}
+		{{range .Vars}}
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					failures = append(failures, failure{Pkg: "{{$path}}", Type: "{{.}}", Err: fmt.Sprint(r)})
+				}
+			}()
+			if p, ok := any({{$alias}}.{{.}}).(interface{ RenderPages() []html.Page }); ok {
+				s.Pages = append(s.Pages, p.RenderPages()...)
+			}
+			if p, ok := any({{$alias}}.{{.}}).(interface{ RenderHTML() string }); ok {
+				s.HTML += p.RenderHTML()
+			}
+		}()
+		{{end}}
 		all["{{$path}}"] = s
 	}
 	{{end}}
@@ -342,6 +358,9 @@ func main() {
 	hasAnyPWA := false
 	hasAnyArtifactSources := false
 	for _, m := range aliases {
+		if len(m.Vars) > 0 {
+			hasAnyPages = true
+		}
 		for _, r := range m.Receivers {
 			if r.HasPages {
 				hasAnyPages = true
