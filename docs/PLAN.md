@@ -2,6 +2,8 @@
 PLAN: "feat: exported package variables of the app are page and loading-HTML producers"
 EXECUTOR: jules
 REVIEWER: none
+STATUS: running
+SESSION: 3500701303836341610
 ---
 
 > Read AGENTS.md at the repo root before any change.
