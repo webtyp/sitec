@@ -161,7 +161,7 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 	var aliases []moduleAlias
 	root, err := findProjectRoot(rootDir)
 	if err != nil {
-		root = rootDir
+		return nil, err
 	}
 
 	aliasByCandidate := make(map[string]string)

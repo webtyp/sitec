@@ -56,16 +56,16 @@ import "webtyp.com/html"
 
 func TestVarProducer_Pages(t *testing.T) {
 	tmpDir := setupVarTest(t, `
-type brand struct{ name string }
+type Label struct{ name string }
 
-func (b brand) RenderPages() []html.Page {
+func (b Label) RenderPages() []html.Page {
 	if b.name == "" {
 		return nil
 	}
 	return []html.Page{{Path: "/", Body: "<p>" + b.name + "</p>"}}
 }
 
-var Brand = brand{name: "Acme"}
+var Brand = Label{name: "Acme"}
 `)
 	defer os.RemoveAll(tmpDir)
 
@@ -84,7 +84,7 @@ var Brand = brand{name: "Acme"}
 
 	var rootAsset *sitec.Assets
 	for _, a := range all {
-		if a.ModuleName == "example.com/app/config" {
+		if a.ModuleName == "example.com/app" {
 			rootAsset = a
 			break
 		}
@@ -107,13 +107,14 @@ var Brand = brand{name: "Acme"}
 
 func TestVarProducer_HTML(t *testing.T) {
 	tmpDir := setupVarTest(t, `
-type brand struct{ name string }
+type Label struct{ name string }
 
-func (b brand) RenderHTML() string {
+func (b Label) RenderHTML() string {
 	return "<p>loading " + b.name + "</p>"
 }
 
-var Brand = brand{name: "Acme"}
+var Brand = Label{name: "Acme"}
+var _ html.Page
 `)
 	defer os.RemoveAll(tmpDir)
 
@@ -129,7 +130,7 @@ var Brand = brand{name: "Acme"}
 
 	var rootAsset *sitec.Assets
 	for _, a := range all {
-		if a.ModuleName == "example.com/app/config" {
+		if a.ModuleName == "example.com/app" {
 			rootAsset = a
 			break
 		}
@@ -145,14 +146,15 @@ var Brand = brand{name: "Acme"}
 
 func TestVarProducer_OtherTypeIgnored(t *testing.T) {
 	tmpDir := setupVarTest(t, `
-type normalProducer struct{}
-func (n *normalProducer) RenderHTML() string {
+type NormalProducer struct{}
+func (n *NormalProducer) RenderHTML() string {
 	return "normal"
 }
 
 var Port = 8080
 var Names = []string{"a"}
 var Brand = struct{}{}
+var _ html.Page // setupVarTest imports html
 `)
 	defer os.RemoveAll(tmpDir)
 
@@ -168,7 +170,7 @@ var Brand = struct{}{}
 
 	var rootAsset *sitec.Assets
 	for _, a := range all {
-		if a.ModuleName == "example.com/app/config" {
+		if a.ModuleName == "example.com/app" {
 			rootAsset = a
 			break
 		}
