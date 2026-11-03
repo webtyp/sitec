@@ -2,8 +2,10 @@
 PLAN: "feat: exported package variables of the app are page and loading-HTML producers"
 EXECUTOR: jules
 REVIEWER: none
-STATUS: running
+STATUS: review
 SESSION: 3500701303836341610
+PR: https://github.com/webtyp/sitec/pull/33
+REVIEWED_COMMIT: ed9edc781f6213c651f624d2a357d922a8e755a2
 ---
 
 > Read AGENTS.md at the repo root before any change.
