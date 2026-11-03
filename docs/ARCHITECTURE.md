@@ -85,7 +85,7 @@ Obligations on the author:
 ### 3.1 Detection matches the method name only
 
 Never the signature, never the return type, never the package that type comes
-from. This is what allowed `IconSvg()` to change its return type without touching
+from. Values are discovered only in the app's own packages. This is what allowed `IconSvg()` to change its return type without touching
 the extractor, and it is why the generated program can type the sprite as `any`:
 that program is compiled against whatever the target package actually returns.
 

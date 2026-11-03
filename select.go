@@ -159,6 +159,11 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 
 	var skipped []string
 	var aliases []moduleAlias
+	root, err := findProjectRoot(rootDir)
+	if err != nil {
+		root = rootDir
+	}
+
 	aliasByCandidate := make(map[string]string)
 	for _, m := range pkgs {
 		// reach.partial: at least one build target's probe failed, so the
@@ -230,7 +235,7 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 				return receivers[i].Name < receivers[j].Name
 			})
 
-			if len(receivers) == 0 {
+			if len(receivers) == 0 && len(feats.Vars) == 0 {
 				absRoot, _ := filepath.Abs(rootDir)
 				isLocal := absRoot != "" && strings.HasPrefix(m.dir, absRoot)
 				if isLocal {
@@ -257,6 +262,10 @@ func modulesToAliases(modules []module, scanner *scanner, assetLibraries []strin
 			}
 
 			ma.Receivers = receivers
+
+			if strings.HasPrefix(m.dir+"/", root+"/") {
+				ma.Vars = feats.Vars
+			}
 		}
 
 		aliases = append(aliases, ma)
