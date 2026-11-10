@@ -24,7 +24,6 @@ type CollectorOutput struct {
 	Fonts   font.Declaration `json:"fonts"`
 	Pages   []html.Page      `json:"pages"`
 	Site    *Site            `json:"site"`
-	Favicon *FaviconWire     `json:"favicon"`
 	PWA     *pwa.Config      `json:"pwa"`
 	// ArtifactSources are the large files declared by ArtifactSources(); root only.
 	ArtifactSources []artifacts.Source `json:"artifacts"`
@@ -35,13 +34,6 @@ type fontsWire struct {
 	Family string `json:"family"`
 	Dir    string `json:"dir"`
 }
-
-type FaviconWire struct {
-	Raster []byte `json:"raster"`
-	SVG    []byte `json:"svg"`
-}
-
-type faviconWire = FaviconWire
 
 type ScriptOutput struct {
 	Name    string `json:"name"`
@@ -64,7 +56,6 @@ type receiverFeature struct {
 	HasFonts           bool
 	HasPages           bool
 	HasSite            bool
-	HasFavicon         bool
 	HasPWA             bool
 	HasArtifactSources bool
 }
@@ -110,7 +101,6 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 		Fonts           fontsWire          `json:"fonts"`
 		Pages           []html.Page        `json:"pages"`
 		Site            *Site              `json:"site"`
-		Favicon         *faviconWire       `json:"favicon"`
 		PWA             *pwa.Config        `json:"pwa"`
 		ArtifactSources []artifacts.Source `json:"artifacts"`
 	}
@@ -154,7 +144,6 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 			Fonts:           fonts,
 			Pages:           raw.Pages,
 			Site:            raw.Site,
-			Favicon:         raw.Favicon,
 			PWA:             raw.PWA,
 			ArtifactSources: raw.ArtifactSources,
 		}
@@ -200,11 +189,6 @@ type siteWire struct {
 	StaticAssets []string ` + "`json:\"static_assets\"`" + `
 }
 
-type faviconWire struct {
-	Raster []byte ` + "`json:\"raster\"`" + `
-	SVG    []byte ` + "`json:\"svg\"`" + `
-}
-
 type ssr struct {
 	Root    string       ` + "`json:\"root\"`" + `
 	Render  string       ` + "`json:\"render\"`" + `
@@ -213,7 +197,6 @@ type ssr struct {
 	Icons   []any        ` + "`json:\"icons\"`" + `
 	Fonts   fontsWire    ` + "`json:\"fonts\"`" + `
 	Site    *siteWire    ` + "`json:\"site\"`" + `
-	Favicon *faviconWire ` + "`json:\"favicon\"`" + `
 	{{if .HasAnyPWA}}PWA *pwa.Config ` + "`json:\"pwa\"`" + `{{end}}
 	{{if .HasAnyArtifactSources}}ArtifactSources []artifacts.Source ` + "`json:\"artifacts\"`" + `{{end}}
 	{{if .HasAnyPages}}Pages []html.Page ` + "`json:\"pages\"`" + `{{end}}
@@ -266,12 +249,6 @@ func main() {
 				s.Site = &siteWire{URL: st.URL, StaticAssets: st.StaticAssets}
 			}
 			{{end}}
-			{{if .HasFavicon}}
-			{
-				f := inst.Favicon()
-				s.Favicon = &faviconWire{Raster: f.Raster, SVG: f.SVG}
-			}
-			{{end}}
 			{{if .HasPWA}}
 			{
 				c := inst.PWA()
@@ -300,12 +277,6 @@ func main() {
 			{
 				st := {{$alias}}.RenderSite()
 				s.Site = &siteWire{URL: st.URL, StaticAssets: st.StaticAssets}
-			}
-			{{end}}
-			{{if .HasFavicon}}
-			{
-				f := {{$alias}}.Favicon()
-				s.Favicon = &faviconWire{Raster: f.Raster, SVG: f.SVG}
 			}
 			{{end}}
 			{{if .HasPWA}}

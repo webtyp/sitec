@@ -62,27 +62,21 @@ require (
 replace webtyp.com/sitec => `+repoRoot+"\n"+webtypReplaces(t))
 
 	raster := generate512PNG(t)
-	if err := os.WriteFile(filepath.Join(appDir, "logo.png"), raster, 0644); err != nil {
+	if err := os.MkdirAll(filepath.Join(appDir, "docs", "logo"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "docs", "logo", "logo.png"), raster, 0644); err != nil {
 		t.Fatal(err)
 	}
 
 	write(filepath.Join(appDir, "app.go"), `package app
 
 import (
-	_ "embed"
 	"webtyp.com/css"
-	"webtyp.com/image/favicon"
 	"webtyp.com/pwa"
 )
 
-//go:embed logo.png
-var logo []byte
-
 type App struct{}
-
-func (a *App) Favicon() favicon.Source {
-	return favicon.Source{Raster: logo}
-}
 
 func (a *App) PWA() pwa.Config {
 	return pwa.Config{

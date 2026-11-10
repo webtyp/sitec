@@ -18,10 +18,10 @@ import (
 	"webtyp.com/artifacts"
 	twcss "webtyp.com/css"
 	"webtyp.com/fmt"
-	"webtyp.com/lang"
 	"webtyp.com/font"
 	"webtyp.com/image/favicon"
 	imgmin "webtyp.com/image/min"
+	"webtyp.com/lang"
 	"webtyp.com/pwa"
 	"webtyp.com/svg/sprite"
 )
@@ -71,11 +71,6 @@ func msgStaticAbsent(path string) string {
 	return lang.Translate(msgPrefix, "static", "asset", "declared", "and", "missing:", path).String()
 }
 
-func msgFaviconNonRoot(moduleName string) string {
-	return lang.Translate(msgPrefix, "only", "the", "root", "module", "may", "declare",
-		"Favicon();", "it", "is", "declared", "by", moduleName).String()
-}
-
 func msgPWANonRoot(moduleName string) string {
 	return lang.Translate(msgPrefix, "only", "the", "root", "module", "may", "declare",
 		"PWA();", "it", "is", "declared", "by", moduleName).String()
@@ -86,19 +81,30 @@ func msgArtifactsNonRoot(moduleName string) string {
 		"ArtifactSources();", "it", "is", "declared", "by", moduleName).String()
 }
 
-func msgPWAWithoutFavicon() string {
-	return lang.Translate(msgPrefix, "the", "project", "declares", "PWA();", "but", "not",
-		"Favicon();", "—", "the", "install", "icons", "come", "from", "Favicon()").String()
+func msgPWAWithoutIcon() string {
+	return lang.Translate(msgPrefix, "the", "project", "declares", "PWA();", "but", "has", "no",
+		"icon", "—", "the", "install", "icons", "come", "from", logoFile).String()
 }
+
+// logoFile is the one place an app's icon lives (D57), relative to the project root. logoSVGFile
+// is its optional vector twin.
+const (
+	logoFile    = "docs/logo/logo.png"
+	logoSVGFile = "docs/logo/logo.svg"
+	// faviconDocs is the page that explains the icon.
+	faviconDocs = "https://github.com/webtyp/image/blob/main/README.md#favicon-backend"
+)
 
 func msgEmptyExtraction() string {
 	return lang.Translate(msgPrefix, "empty", "extraction:", "no", "module", "contributed",
 		"assets").String()
 }
 
-func msgNoFavicon() string {
-	return lang.Translate(msgPrefix, "the", "project", "does", "not", "declare", "Favicon();",
-		"pages", "will", "have", "no", "icon").String()
+// msgNoLogo is the single notice of an app without an icon, with the page that explains it. A module
+// is never told: it has no icon of its own.
+func msgNoLogo() string {
+	return lang.Translate(msgPrefix, "this", "app", "has", "no", "icon:", "pages", "will", "have", "none.",
+		"Add", logoFile, "(square,", "512", "px", "or", "more)", "—", faviconDocs).String()
 }
 
 type Compiler struct {
@@ -134,6 +140,7 @@ type Compiler struct {
 	largeKey            string                // tamaño y fecha de cada archivo al medirlos (large.go)
 	faviconFiles        []favicon.File
 	faviconMu           sync.RWMutex
+	noLogoHinted        bool // the notice of an app without an icon was already said; guarded by faviconMu
 	fs                  FS
 	wasmFilename        string
 	wasmRuntime         string
@@ -409,25 +416,18 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 		return err
 	}
 
-	// 0.5 Favicon(): solo el raíz puede declarar. Derivar y escribir el juego completo.
-	var faviconOwner string
-	var faviconSrc *favicon.Source
-	for _, a := range all {
-		if a == nil || a.Favicon == nil {
-			continue
-		}
-		if !a.IsRoot {
-			return fmt.Err(msgFaviconNonRoot(a.ModuleName))
-		}
-		if faviconOwner != "" {
-			return fmt.Err(msgFaviconNonRoot(a.ModuleName))
-		}
-		faviconOwner = a.ModuleName
-		faviconSrc = &favicon.Source{Raster: a.Favicon.Raster, SVG: a.Favicon.SVG}
+	// 0.5 Icon (D57): docs/logo/logo.png under the project root, else the daemon's fallback (a module's
+	// demo). Derived in memory; nothing is written into the project.
+	faviconSrc, faviconFromFile, err := c.faviconSource()
+	if err != nil {
+		return err
 	}
-	if faviconOwner != "" {
+	if faviconSrc != nil {
 		files, err := favicon.Derive(*faviconSrc)
 		if err != nil {
+			if faviconFromFile {
+				return fmt.Err(logoFile+":", err)
+			}
 			return err
 		}
 		c.faviconMu.Lock()
@@ -477,7 +477,7 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 			c.faviconMu.Unlock()
 			delete(c.allAssets, c.faviconSvgHandler.outputPath)
 			c.updateHtmlFaviconLinks()
-			c.Logger(msgNoFavicon())
+			c.hintNoLogo()
 		}
 	}
 
@@ -633,6 +633,9 @@ type Config struct {
 	AssetsURLPrefix string // New: for HTTP routes
 	DevMode         bool   // If true, disables caching (default: false)
 	SiteURL         string // Optional: canonical base URL (e.g. "https://example.com"), used for sitemap.xml and canonical URL resolution
+	// FallbackFavicon is the icon of a project that ships no docs/logo/logo.png: the daemon hands it the
+	// webtyp logo for a module's demo. In memory only — nothing is written into the project. nil = none.
+	FallbackFavicon *favicon.Source
 }
 
 func NewCompiler(ac *Config) *Compiler {

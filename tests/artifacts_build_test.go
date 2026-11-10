@@ -21,7 +21,7 @@ import (
 const artifactsModelPath = "models/decider.wtypw"
 
 // writeArtifactsApp writes a project whose root declares ArtifactSources() with one 3 MiB file (created
-// unless missing is true). withPWA also declares Favicon() and PWA(). Returns the file's bytes.
+// unless missing is true). withPWA also ships docs/logo/logo.png and declares PWA(). Returns the file's bytes.
 func writeArtifactsApp(t *testing.T, appDir string, withPWA, missing bool) []byte {
 	t.Helper()
 	wcwd, err := os.Getwd()
@@ -77,22 +77,15 @@ func (a *App) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 func (a *App) RenderHTML() string         { return "<div>artifacts</div>" }
 `
 	if withPWA {
-		if err := os.WriteFile(filepath.Join(appDir, "logo.png"), generate512PNG(t), 0644); err != nil {
+		if err := os.MkdirAll(filepath.Join(appDir, "docs", "logo"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(appDir, "docs", "logo", "logo.png"), generate512PNG(t), 0644); err != nil {
 			t.Fatal(err)
 		}
 		write(filepath.Join(appDir, "pwa.go"), `package app
 
-import (
-	_ "embed"
-
-	"webtyp.com/image/favicon"
-	"webtyp.com/pwa"
-)
-
-//go:embed logo.png
-var logo []byte
-
-func (a *App) Favicon() favicon.Source { return favicon.Source{Raster: logo} }
+import "webtyp.com/pwa"
 
 func (a *App) PWA() pwa.Config {
 	return pwa.Config{Name: "Artifacts", ShortName: "Art", ThemeColor: "#0055ff", BackgroundColor: "#ffffff"}

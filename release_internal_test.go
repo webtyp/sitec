@@ -1,4 +1,4 @@
-// Root-level test (justified): exercises finalizeRelease, releaseInput — the release finalisation step and its diagnostics (msgPWAWithoutFavicon), internal to Build.
+// Root-level test (justified): exercises finalizeRelease, releaseInput — the release finalisation step and its diagnostics (msgPWAWithoutIcon), internal to Build.
 package sitec
 
 import (
@@ -231,8 +231,8 @@ func TestFinalizeRelease_PWAWithoutFavicon(t *testing.T) {
 		t.Fatalf("expected error when PWA declared without Favicon")
 	}
 
-	if err.Error() != msgPWAWithoutFavicon() {
-		t.Fatalf("expected error %q, got %q", msgPWAWithoutFavicon(), err.Error())
+	if err.Error() != msgPWAWithoutIcon() {
+		t.Fatalf("expected error %q, got %q", msgPWAWithoutIcon(), err.Error())
 	}
 }
 

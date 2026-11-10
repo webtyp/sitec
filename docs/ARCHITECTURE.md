@@ -57,7 +57,6 @@ names, on any type, in any non-test file.
 | `IconSvg()` | `Icons` | sprite, merged across packages |
 | `Fonts()` | `Fonts` | typeface identity (`font.Declaration`); one per module |
 | `RenderSite()` | `Site` | site declaration (`*sitec.Site`): public URL + static assets. Only the project root may declare it; a second root or any non-root module declaring it is a build error/warning respectively |
-| `Favicon()` | `Favicon` | site icon (`favicon.Source` via `webtyp.com/image/favicon`): derives `icon-32.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico` and `favicon.svg` (when SVG provided). Only the project root may declare it; a non-root module declaring it fails the build naming the module |
 
 A module's `Site` travels with the module: the root's declaration is what the
 assembler listens to. It resolves the effective `SiteURL` once (the project
@@ -164,7 +163,7 @@ extractor find it, or fail the build naming the package. Never skip quietly.
 In release builds (`ModeRelease`), `sitec` executes a pure finalization pass (`finalizeRelease`) over all produced artifacts:
 
 1. **PWA head and register script injection** (when `PWA()` is declared):
-   - Reads `PWA()` config from the root module and install icons from `Favicon()`.
+   - Reads `PWA()` config from the root module and install icons from `docs/logo/logo.png`.
    - Injects `<link rel="manifest">` and PWA meta tags into all HTML artifacts (`app.HeadTags` before `</head>`).
    - Appends `app.RegisterScript` to the main JS script artifact.
    - Generates `manifest.webmanifest`.
@@ -187,7 +186,7 @@ In release builds (`ModeRelease`), `sitec` executes a pure finalization pass (`f
 
 ### PWA declaration
 
-A project declares its PWA configuration next to `Favicon()` on its root receiver:
+A project declares its PWA configuration on its root receiver:
 
 ```go
 func (a *App) PWA() pwa.Config {
@@ -200,13 +199,13 @@ func (a *App) PWA() pwa.Config {
 }
 ```
 
-Only the root module of a project may declare `PWA()`. Declaring `PWA()` in a non-root module or without declaring `Favicon()` fails the build.
+Only the root module of a project may declare `PWA()`. Declaring `PWA()` in a non-root module or without an icon (`docs/logo/logo.png`) fails the build.
 
 ### Large artifacts
 
 A project declares the large files its browser code downloads (model weights,
 caches) with `ArtifactSources() []artifacts.Source` in its root package (`!wasm`),
-next to `Favicon()` and `PWA()` (D-PWA-15):
+next to `PWA()` (D-PWA-15):
 
 1. Extraction brings the sources to `Compiler.artifactSources` (root only).
 2. `artifacts.BuildManifest` measures each file — size and SHA-256, streamed,

@@ -48,7 +48,6 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 	merged.Icons = sprite.NewSprite()
 	var fontsFrom string
 	var siteFrom string
-	var faviconFrom string
 	var pwaFrom string
 	var artifactsFrom string
 
@@ -83,14 +82,6 @@ func MergeResultsFor(modulePath string, results map[string]CollectorOutput) (Col
 			}
 			merged.Site = out.Site
 			siteFrom = p
-		}
-		if out.Favicon != nil {
-			if faviconFrom != "" {
-				return CollectorOutput{}, false, fmt.Err("ssr: multiple Favicon() declarations:",
-					faviconFrom, "and", p, "— only one package per module may declare Favicon()")
-			}
-			merged.Favicon = out.Favicon
-			faviconFrom = p
 		}
 		if out.PWA != nil {
 			if pwaFrom != "" {

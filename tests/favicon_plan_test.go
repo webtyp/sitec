@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"webtyp.com/html"
+	"webtyp.com/image/favicon"
 	"webtyp.com/sitec"
 )
 
@@ -58,34 +59,21 @@ require (
 )
 
 replace webtyp.com/sitec => `+repoRoot+"\n"+webtypReplaces(t))
-	hasSVG := len(svg) > 0
-	svgEmbed := ""
-	svgField := ""
-	if hasSVG {
-		write(filepath.Join(appDir, "logo.svg"), string(svg))
-		svgEmbed = "//go:embed logo.svg\nvar logoSVG []byte\n"
-		svgField = "SVG: logoSVG,"
-	}
-	rasterFile := filepath.Join(appDir, "logo.png")
-	if err := os.WriteFile(rasterFile, raster, 0644); err != nil {
+	// The icon is the file docs/logo/logo.png (+ optional logo.svg).
+	if err := os.MkdirAll(filepath.Join(appDir, "docs", "logo"), 0755); err != nil {
 		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(appDir, "docs", "logo", "logo.png"), raster, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if len(svg) > 0 {
+		write(filepath.Join(appDir, "docs", "logo", "logo.svg"), string(svg))
 	}
 	write(filepath.Join(appDir, "brand.go"), `package app
 
-import (
-	_ "embed"
-	"webtyp.com/css"
-	"webtyp.com/image/favicon"
-)
+import "webtyp.com/css"
 
-//go:embed logo.png
-var logo []byte
-`+svgEmbed+`
 type Brand struct{}
-
-func (b *Brand) Favicon() favicon.Source {
-	return favicon.Source{Raster: logo, `+svgField+`}
-}
 
 func (b *Brand) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 `)
@@ -96,7 +84,8 @@ func (b *Brand) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 	}
 }
 
-func TestFaviconProducerIsRecognized(t *testing.T) {
+// D57: the icon set comes from docs/logo/logo.png.
+func TestFaviconFromLogoFile(t *testing.T) {
 	appDir := t.TempDir()
 	raster := pngBytesHelper(t, 256, 256)
 	writeTempAppWithFaviconHelper(t, appDir, raster, nil)
@@ -111,110 +100,7 @@ func TestFaviconProducerIsRecognized(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("expected /icon-32.png artifact after Favicon producer, got none; artifacts: %v", out.Artifacts())
-	}
-}
-
-func TestFaviconOnlyRootModule(t *testing.T) {
-	am := sitec.NewCompiler(&sitec.Config{RootDir: "/tmp/fake-root"})
-	am.SetLog(func(...any) {})
-	raster := pngBytesHelper(t, 256, 256)
-	err := am.RouteExtractedAssets([]*sitec.Assets{
-		{ModuleName: "example.com/app", IsRoot: true},
-		{ModuleName: "github.com/acme/widget", IsRoot: false, Favicon: &sitec.FaviconWire{Raster: raster}},
-	})
-	if err == nil {
-		t.Fatalf("expected error when non-root declares Favicon(), got nil")
-	}
-	if !strings.Contains(err.Error(), "github.com/acme/widget") {
-		t.Errorf("expected error to name github.com/acme/widget, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "only the root module") {
-		t.Errorf("expected msgFaviconNonRoot, got: %v", err)
-	}
-}
-
-func TestFaviconOnlyRootModuleViaBuild(t *testing.T) {
-	wcwd, _ := os.Getwd()
-	repoRoot := filepath.Dir(wcwd)
-	appDir := t.TempDir()
-	libDir := filepath.Join(appDir, "libwidget")
-	write := func(p, c string) {
-		os.MkdirAll(filepath.Dir(p), 0755)
-		os.WriteFile(p, []byte(c), 0644)
-	}
-	write(filepath.Join(appDir, "go.mod"), `module example.com/app
-
-go 1.25.2
-
-require (
-	webtyp.com/html v0.0.17
-	webtyp.com/image v0.1.0
-	webtyp.com/sitec v0.0.0
-	example.com/widget v0.0.0
-)
-
-replace webtyp.com/sitec => `+repoRoot+`
-replace example.com/widget => ./libwidget
-`+webtypReplaces(t))
-	raster := pngBytesHelper(t, 256, 256)
-	os.WriteFile(filepath.Join(appDir, "logo.png"), raster, 0644)
-	write(filepath.Join(appDir, "app.go"), `package app
-
-import (
-	_ "embed"
-	"webtyp.com/css"
-	"webtyp.com/image/favicon"
-	_ "example.com/widget"
-)
-
-//go:embed logo.png
-var logo []byte
-
-type Brand struct{}
-func (b *Brand) Favicon() favicon.Source { return favicon.Source{Raster: logo} }
-func (b *Brand) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
-`)
-	write(filepath.Join(libDir, "go.mod"), `module example.com/widget
-
-go 1.25.2
-
-require (
-	webtyp.com/css v0.4.15
-	webtyp.com/image v0.1.0
-)
-`+webtypReplaces(t))
-	write(filepath.Join(libDir, "widget.go"), `package widget
-
-import (
-	_ "embed"
-	"webtyp.com/css"
-	"webtyp.com/image/favicon"
-)
-
-//go:embed logo.png
-var logo []byte
-
-type Widget struct{}
-func (w *Widget) Favicon() favicon.Source { return favicon.Source{Raster: logo} }
-func (w *Widget) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
-`)
-	os.WriteFile(filepath.Join(libDir, "logo.png"), raster, 0644)
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = appDir
-	cmd.CombinedOutput()
-	cmd2 := exec.Command("go", "mod", "tidy")
-	cmd2.Dir = libDir
-	cmd2.CombinedOutput()
-	_, err := sitec.BuildWithConfig(sitec.BuildConfig{RootDir: appDir, Mode: sitec.ModeRelease})
-	if err == nil {
-		t.Fatalf("expected error when non-root declares Favicon(), got nil")
-	}
-	if !strings.Contains(err.Error(), "only the root module") {
-		t.Errorf("expected error naming module and msgFaviconNonRoot, got: %v", err)
-	}
-	if !strings.Contains(err.Error(), "example.com/widget") && !strings.Contains(err.Error(), "widget") {
-		t.Errorf("expected error to name widget module, got: %v", err)
+		t.Errorf("expected /icon-32.png artifact from docs/logo/logo.png, got none; artifacts: %v", out.Artifacts())
 	}
 }
 
@@ -295,6 +181,9 @@ func TestFaviconInvalidLogoFailsBuild(t *testing.T) {
 	if !strings.Contains(msg, "cuadrado") && !strings.Contains(msg, "256") {
 		t.Errorf("expected favicon.Derive error message, got: %v", msg)
 	}
+	if !strings.Contains(msg, "docs/logo/logo.png") {
+		t.Errorf("the error must name the file to fix, got: %v", msg)
+	}
 }
 
 func TestNoFaviconNoLinkNoFile(t *testing.T) {
@@ -336,7 +225,7 @@ func (p *P) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 	}
 	for _, a := range out.Artifacts() {
 		if a.Path == "/favicon.svg" {
-			t.Errorf("should not emit favicon.svg when no Favicon() and no existing file, got artifact %v", a.Path)
+			t.Errorf("should not emit favicon.svg when there is no logo and no existing file, got artifact %v", a.Path)
 		}
 		if a.Path == "/icon-32.png" {
 			t.Errorf("should not emit icon-32 when no favicon")
@@ -414,5 +303,128 @@ func (p *P) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 	count := strings.Count(htmlContent, `rel="icon"`) + strings.Count(htmlContent, `rel='icon'`) + strings.Count(htmlContent, `rel=\"icon\"`)
 	if count != 1 {
 		t.Errorf("expected 1 icon link for existing svg, got %d: %s", count, htmlContent)
+	}
+}
+
+// D56/D57: the icon of a module's demo is a default the daemon hands over (in memory, nothing in the repo),
+// an app is told once when it has none, a module is never told, and the file wins over the default.
+const faviconDocsLink = "https://github.com/webtyp/image/blob/main/README.md#favicon-backend"
+
+func faviconCompiler(t *testing.T, root string, fallback *favicon.Source) (*sitec.Compiler, *[]string) {
+	t.Helper()
+	am := sitec.NewCompiler(&sitec.Config{RootDir: root, OutputDir: t.TempDir(), FallbackFavicon: fallback})
+	var lines []string
+	am.SetLog(func(m ...any) {
+		parts := make([]string, len(m))
+		for i, v := range m {
+			parts[i], _ = v.(string)
+		}
+		lines = append(lines, strings.Join(parts, " "))
+	})
+	return am, &lines
+}
+
+func hasArtifact(am *sitec.Compiler, path string) bool {
+	for _, a := range am.List() {
+		if a.Path == path {
+			return true
+		}
+	}
+	return false
+}
+
+func mkApp(t *testing.T, root string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Join(root, "config"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestFavicon_FallbackIconServesAModuleDemo(t *testing.T) {
+	root := t.TempDir() // a module: no docs/logo, no config/
+	fb := &favicon.Source{Raster: pngBytesHelper(t, 512, 512)}
+	am, lines := faviconCompiler(t, root, fb)
+	if err := am.RouteExtractedAssets([]*sitec.Assets{{ModuleName: "example.com/mod", IsRoot: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if !hasArtifact(am, "/icon-32.png") {
+		t.Errorf("the demo must get the default icon, got %v", am.List())
+	}
+	if len(*lines) != 0 {
+		t.Errorf("a module with an icon says nothing, got %v", *lines)
+	}
+}
+
+func TestFavicon_LogoFileWinsOverTheFallback(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "docs", "logo"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mine := pngBytesHelper(t, 300, 300)
+	if err := os.WriteFile(filepath.Join(root, "docs", "logo", "logo.png"), mine, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	am, _ := faviconCompiler(t, root, &favicon.Source{Raster: pngBytesHelper(t, 512, 512)})
+	if err := am.RouteExtractedAssets([]*sitec.Assets{{ModuleName: "example.com/app", IsRoot: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if !hasArtifact(am, "/icon-32.png") {
+		t.Fatalf("docs/logo/logo.png must produce the icon set, got %v", am.List())
+	}
+	if hasArtifact(am, "/icon-512.png") {
+		t.Error("a 300 px logo must not be served as a 512 px icon: the fallback leaked in")
+	}
+}
+
+func TestFavicon_AppWithoutLogoIsToldOnce(t *testing.T) {
+	root := t.TempDir()
+	mkApp(t, root)
+	am, lines := faviconCompiler(t, root, nil)
+	assets := []*sitec.Assets{{ModuleName: "example.com/app", IsRoot: true}}
+	for i := 0; i < 2; i++ { // a second scan after a file event
+		if err := am.RouteExtractedAssets(assets); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n := 0
+	for _, l := range *lines {
+		if strings.Contains(l, "docs/logo/logo.png") && strings.Contains(l, faviconDocsLink) {
+			n++
+		}
+	}
+	if n != 1 {
+		t.Errorf("want one notice naming docs/logo/logo.png and %s, got %d in %v", faviconDocsLink, n, *lines)
+	}
+}
+
+func TestFavicon_ModuleWithoutLogoIsQuiet(t *testing.T) {
+	am, lines := faviconCompiler(t, t.TempDir(), nil)
+	if err := am.RouteExtractedAssets([]*sitec.Assets{{ModuleName: "example.com/mod", IsRoot: true}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, l := range *lines {
+		if strings.Contains(strings.ToLower(l), "favicon") || strings.Contains(l, "logo") {
+			t.Errorf("a module has no icon of its own and must not be told to add one, got %q", l)
+		}
+	}
+}
+
+func TestIsApp(t *testing.T) {
+	cases := map[string]string{"config folder": "config/routes.go", "web binary": "web/server/main.go"}
+	for name, marker := range cases {
+		root := t.TempDir()
+		p := filepath.Join(root, marker)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("package x\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if !sitec.IsApp(root) {
+			t.Errorf("%s: want an app", name)
+		}
+	}
+	if sitec.IsApp(t.TempDir()) {
+		t.Error("an empty folder (a module) is not an app")
 	}
 }

@@ -48,30 +48,24 @@ func main() {
 
 ## Icono del sitio
 
-Un proyecto declara su icono con `Favicon()` en su paquete de configuración (`!wasm`):
+El icono de un proyecto es un archivo, no código: `docs/logo/logo.png` (cuadrado, de al menos 512 px) y, si quiere, `docs/logo/logo.svg` junto a él. No hay nada que declarar. Un PNG que no es cuadrado o es más pequeño de lo necesario falla el build y nombra el archivo.
 
-```go
-//go:embed logo.png
-var logo []byte
-
-func (b *Brand) Favicon() favicon.Source {
-    return favicon.Source{Raster: logo}
-}
+```
+docs/logo/logo.png    ← obligatorio
+docs/logo/logo.svg    ← opcional
 ```
 
-`sitec` deriva el juego completo vía `webtyp.com/image/favicon` (`icon-32.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico` y `favicon.svg` si se provee SVG) y emite un `<link>` por cada archivo con `Rel`.
+Una aplicación (tiene `config/` o `web/<binario>/main.go`) sin icono lo ve una vez en el log con el enlace a la documentación; un módulo no lo ve nunca. La demo de un módulo recibe el logo de webtyp en memoria (`Config.FallbackFavicon`).
+
+`sitec` deriva el juego completo en memoria vía `webtyp.com/image/favicon` (`icon-32.png`, `icon-192.png`, `apple-touch-icon.png`, `favicon.ico` y `favicon.svg` si se provee SVG) y emite un `<link>` por cada archivo con `Rel`.
 
 `sitec` **no sanea** el SVG que reciba: un SVG de un tercero se limpia antes con `webtyp.com/svg/sanitize`. El de un proyecto es suyo y es de confianza.
 
 ## Aplicación Web Progresiva (PWA)
 
-Un proyecto se convierte en PWA declarando `Favicon()` (con un logo de al menos 512 px) y `PWA()` en su paquete raíz (`!wasm`):
+Un proyecto se convierte en PWA con un `docs/logo/logo.png` de al menos 512 px y `PWA()` en su paquete raíz (`!wasm`):
 
 ```go
-func (a *App) Favicon() favicon.Source {
-    return favicon.Source{Raster: logo} // logo >= 512x512
-}
-
 func (a *App) PWA() pwa.Config {
     return pwa.Config{
         Name:            "Mi Aplicación",
@@ -86,7 +80,7 @@ En builds de producción (`ModeRelease`), `sitec` emite automáticamente `manife
 
 ## Artefactos pesados
 
-Los archivos grandes que descarga el código del navegador (pesos de modelos, cachés) se declaran con `ArtifactSources()` en el paquete raíz (`!wasm`), junto a `Favicon()` y `PWA()`:
+Los archivos grandes que descarga el código del navegador (pesos de modelos, cachés) se declaran con `ArtifactSources()` en el paquete raíz (`!wasm`), junto a `PWA()`:
 
 ```go
 //go:build !wasm

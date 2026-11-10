@@ -38,7 +38,7 @@ func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 	if in.PWA != nil {
 		hasPWA = true
 		if len(in.Favicons) == 0 {
-			return nil, fmt.Err(msgPWAWithoutFavicon())
+			return nil, fmt.Err(msgPWAWithoutIcon())
 		}
 		var icons []pwa.Icon
 		for _, f := range in.Favicons {

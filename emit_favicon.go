@@ -1,9 +1,12 @@
 package sitec
 
 import (
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
+	"webtyp.com/fmt"
 	"webtyp.com/image/favicon"
 )
 
@@ -150,5 +153,43 @@ func (c *Compiler) updateHtmlFaviconLinks() {
 	if len(c.indexHtmlHandler.contentClose) > 0 {
 		c.indexHtmlHandler.contentClose[0].Content = closeContent
 		c.indexHtmlHandler.cacheValid = false
+	}
+}
+
+// faviconSource is the icon of the project: docs/logo/logo.png (and the optional docs/logo/logo.svg beside
+// it) under the root, else the fallback the daemon handed over, else none. fromFile tells which, so an
+// invalid file is reported by its name.
+func (c *Compiler) faviconSource() (src *favicon.Source, fromFile bool, err error) {
+	if c.Config != nil && c.RootDir != "" {
+		raster, rerr := os.ReadFile(filepath.Join(c.RootDir, filepath.FromSlash(logoFile)))
+		if rerr == nil {
+			s := &favicon.Source{Raster: raster}
+			if svg, serr := os.ReadFile(filepath.Join(c.RootDir, filepath.FromSlash(logoSVGFile))); serr == nil {
+				s.SVG = svg
+			}
+			return s, true, nil
+		}
+		if !os.IsNotExist(rerr) {
+			return nil, true, fmt.Err(logoFile+":", rerr)
+		}
+	}
+	if c.Config != nil && c.FallbackFavicon != nil {
+		return c.FallbackFavicon, false, nil
+	}
+	return nil, false, nil
+}
+
+// hintNoLogo tells an app without an icon, once per run: a scan repeats on every file event, a module is
+// never told.
+func (c *Compiler) hintNoLogo() {
+	if c.Config == nil || !IsApp(c.RootDir) {
+		return
+	}
+	c.faviconMu.Lock()
+	done := c.noLogoHinted
+	c.noLogoHinted = true
+	c.faviconMu.Unlock()
+	if !done {
+		c.Logger(msgNoLogo())
 	}
 }
