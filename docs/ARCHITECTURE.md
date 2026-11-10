@@ -123,6 +123,11 @@ set, so an unchanged project does not recompile.
   binary that imports them (`web/browser/main.go`).
 - Self-check: a skipped package imported by an asset file of a kept package is an error
   (`unreachableButImportedFmt`) — the probe and the extractor must agree.
+- **Which folder is probed.** The one given to `sitec.New`, unless `SetRootDir(dir)` points the
+  extractor elsewhere (module discovery, `go list` and the owning module all follow it). A module's
+  demo needs it: its browser main is generated outside the module, so the CSS of `layout` and
+  `components` is only in the graph of that folder. Scanning the module's own root yields an empty
+  `style.css`. Cached results are keyed by the module set, so switching root never reuses a stale scan.
 
 ---
 

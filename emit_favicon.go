@@ -42,10 +42,7 @@ func (c *Compiler) hasManualFaviconContent() bool {
 			return true
 		}
 	}
-	if len(c.faviconSvgHandler.cachedMinified) > 0 {
-		return true
-	}
-	return false
+	return len(c.faviconSvgHandler.cachedMinified) > 0
 }
 
 func (c *Compiler) getFirstFaviconURL() string {
@@ -54,7 +51,7 @@ func (c *Compiler) getFirstFaviconURL() string {
 		if f.Rel != "" {
 			prefix := ""
 			if c.Config != nil {
-				prefix = c.Config.AssetsURLPrefix
+				prefix = c.AssetsURLPrefix
 			}
 			c.faviconMu.RUnlock()
 			return path.Join("/", prefix, f.Name)
@@ -103,7 +100,7 @@ func (c *Compiler) updateHtmlFaviconLinks() {
 	files := c.getFaviconFiles()
 	prefix := ""
 	if c.Config != nil {
-		prefix = c.Config.AssetsURLPrefix
+		prefix = c.AssetsURLPrefix
 	}
 	links := buildFaviconHeadLinks(files, prefix)
 	if len(links) == 0 && c.hasManualFaviconContent() {

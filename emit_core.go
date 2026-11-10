@@ -351,13 +351,13 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 	faviconFile := filepath.Base(c.faviconSvgHandler.urlPath)
 
 	if hasPages {
-		c.mainStyleCssHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, cssFile)
-		c.mainJsHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, jsFile)
-		c.faviconSvgHandler.urlPath = path.Join("/", c.Config.AssetsURLPrefix, faviconFile)
+		c.mainStyleCssHandler.urlPath = path.Join("/", c.AssetsURLPrefix, cssFile)
+		c.mainJsHandler.urlPath = path.Join("/", c.AssetsURLPrefix, jsFile)
+		c.faviconSvgHandler.urlPath = path.Join("/", c.AssetsURLPrefix, faviconFile)
 	} else {
-		c.mainStyleCssHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, cssFile)
-		c.mainJsHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, jsFile)
-		c.faviconSvgHandler.urlPath = path.Join(c.Config.AssetsURLPrefix, faviconFile)
+		c.mainStyleCssHandler.urlPath = path.Join(c.AssetsURLPrefix, cssFile)
+		c.mainJsHandler.urlPath = path.Join(c.AssetsURLPrefix, jsFile)
+		c.faviconSvgHandler.urlPath = path.Join(c.AssetsURLPrefix, faviconFile)
 	}
 
 	// 0. RenderSite(): solo el raíz describe el sitio, y solo uno. El aviso de
@@ -439,7 +439,7 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 			if c.fs != nil {
 				outputDir := ""
 				if c.Config != nil {
-					outputDir = c.Config.OutputDir
+					outputDir = c.OutputDir
 				}
 				fullPath := f.Name
 				if outputDir != "" && !filepath.IsAbs(f.Name) {
@@ -454,13 +454,13 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 		c.updateHtmlFaviconLinks()
 	} else {
 		var faviconPath string
-		if c.Config != nil && c.Config.OutputDir != "" {
-			if filepath.IsAbs(c.Config.OutputDir) {
-				faviconPath = filepath.Join(c.Config.OutputDir, "favicon.svg")
-			} else if c.Config.RootDir != "" {
-				faviconPath = filepath.Join(c.Config.RootDir, c.Config.OutputDir, "favicon.svg")
+		if c.Config != nil && c.OutputDir != "" {
+			if filepath.IsAbs(c.OutputDir) {
+				faviconPath = filepath.Join(c.OutputDir, "favicon.svg")
+			} else if c.RootDir != "" {
+				faviconPath = filepath.Join(c.RootDir, c.OutputDir, "favicon.svg")
 			} else {
-				faviconPath = filepath.Join(c.Config.OutputDir, "favicon.svg")
+				faviconPath = filepath.Join(c.OutputDir, "favicon.svg")
 			}
 		} else {
 			faviconPath = "favicon.svg"
@@ -511,11 +511,11 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 		if hasPages {
 			oldPath := c.indexHtmlHandler.outputPath
 			delete(c.allAssets, oldPath)
-			c.indexHtmlHandler.outputPath = filepath.Join(c.Config.OutputDir, "app", "index.html")
+			c.indexHtmlHandler.outputPath = filepath.Join(c.OutputDir, "app", "index.html")
 			c.indexHtmlHandler.urlPath = ShellPath
 			c.allAssets[c.indexHtmlHandler.outputPath] = c.indexHtmlHandler
 		} else {
-			c.indexHtmlHandler.outputPath = filepath.Join(c.Config.OutputDir, "index.html")
+			c.indexHtmlHandler.outputPath = filepath.Join(c.OutputDir, "index.html")
 			c.indexHtmlHandler.urlPath = "/"
 			c.allAssets[c.indexHtmlHandler.outputPath] = c.indexHtmlHandler
 		}
@@ -824,7 +824,7 @@ func (c *Compiler) Read(p string) ([]byte, string, bool) {
 
 	outDir := ""
 	if c.Config != nil {
-		outDir = c.Config.OutputDir
+		outDir = c.OutputDir
 	}
 
 	for _, a := range c.allAssets {
@@ -909,7 +909,7 @@ func (c *Compiler) writeLocked(outPath string, content []byte, mediatype string)
 func (c *Compiler) recordWrite(outPath string, content []byte, mediatype string) (FS, string) {
 	outputDir := ""
 	if c.Config != nil {
-		outputDir = c.Config.OutputDir
+		outputDir = c.OutputDir
 	}
 	c.directArtifacts = append(c.directArtifacts, Artifact{
 		Path:      path.Join("/", outPath),

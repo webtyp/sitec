@@ -51,6 +51,23 @@ func New(rootDir string) *Extractor {
 	}
 }
 
+// SetRootDir points the scan at another folder: its module graph and its
+// discovered modules replace those of the folder given to New. A module's demo
+// needs it — its browser main is generated outside the module, so the packages
+// that declare CSS (`layout`, `components`) are only in the graph of that
+// folder. Cached results are keyed by the module set, so nothing stale is reused.
+func (e *Extractor) SetRootDir(dir string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.rootDir = dir
+}
+
+func (e *Extractor) root() string {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.rootDir
+}
+
 func (e *Extractor) SetLog(fn func(...any))         { e.log = fn }
 func (e *Extractor) SetVerbose(v bool)              { e.verbose = v }
 func (e *Extractor) SetFinder(f modfind.Discoverer) { e.finder = f }
@@ -118,7 +135,8 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 
 	target := resolveOwningModule(moduleDir, modules)
 
-	results, err := e.results(rootDir, e.rootDir, modules)
+	scanRoot := e.root()
+	results, err := e.results(rootDir, scanRoot, modules)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +154,7 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 		})
 	}
 
-	rootModule := resolveOwningModule(e.rootDir, modules)
+	rootModule := resolveOwningModule(scanRoot, modules)
 	a := &Assets{
 		ModuleName:      target.path,
 		RootCSS:         output.Root,
@@ -160,22 +178,23 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 // a nil error means no module declares assets; the caller decides whether that
 // is acceptable.
 func (e *Extractor) ExtractAll() ([]*Assets, error) {
-	modules, err := e.discoverModules(e.rootDir)
+	scanRoot := e.root()
+	modules, err := e.discoverModules(scanRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	rootDir, err := findProjectRoot(e.rootDir)
+	rootDir, err := findProjectRoot(scanRoot)
 	if err != nil {
-		rootDir = e.rootDir
+		rootDir = scanRoot
 	}
 
-	results, err := e.results(rootDir, e.rootDir, modules)
+	results, err := e.results(rootDir, scanRoot, modules)
 	if err != nil {
 		return nil, err
 	}
 
-	rootModule := resolveOwningModule(e.rootDir, modules)
+	rootModule := resolveOwningModule(scanRoot, modules)
 
 	var all []*Assets
 	for _, m := range modules {

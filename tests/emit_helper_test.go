@@ -37,9 +37,10 @@ func (env *TestEnvironment) TestConcurrentFileProcessing(fileExtension string, f
 		filePaths[i] = filepath.Join(env.BaseDir, fileNames[i])
 
 		// Generate appropriate content based on file type
-		if fileExtension == ".js" {
+		switch fileExtension {
+		case ".js":
 			fileContents[i] = []byte(fmt.Sprintf("console.log('Content from %s file %d');", fileType, i+1))
-		} else if fileExtension == ".css" {
+		case ".css":
 			fileContents[i] = []byte(fmt.Sprintf(".test-class-%d { color: blue; content: \"Content from %s file %d\"; }", i+1, fileType, i+1))
 		}
 	}
@@ -89,9 +90,10 @@ func (env *TestEnvironment) TestConcurrentFileProcessing(fileExtension string, f
 	updatedContents := make([][]byte, fileCount)
 	for i := 0; i < fileCount; i++ {
 		// Generate updated content based on file type
-		if fileExtension == ".js" {
+		switch fileExtension {
+		case ".js":
 			updatedContents[i] = []byte(fmt.Sprintf("console.log('Updated content from %s file %d');", fileType, i+1))
-		} else if fileExtension == ".css" {
+		case ".css":
 			updatedContents[i] = []byte(fmt.Sprintf(".test-class-%d { color: red; content: \"Updated content from %s file %d\"; }", i+1, fileType, i+1))
 		}
 		if err := os.WriteFile(filePaths[i], updatedContents[i], 0644); err != nil {
@@ -122,9 +124,10 @@ func (env *TestEnvironment) TestConcurrentFileProcessing(fileExtension string, f
 	// Verify that the updated content of all files is present
 	for i := 0; i < fileCount; i++ {
 		var expectedUpdatedContent string
-		if fileExtension == ".js" {
+		switch fileExtension {
+		case ".js":
 			expectedUpdatedContent = fmt.Sprintf("Updated content from %s file %d", fileType, i+1)
-		} else if fileExtension == ".css" {
+		case ".css":
 			expectedUpdatedContent = fmt.Sprintf("content:\"Updated content from %s file %d\"", fileType, i+1)
 		}
 		if !strings.Contains(updatedContentStr, expectedUpdatedContent) {
@@ -135,9 +138,10 @@ func (env *TestEnvironment) TestConcurrentFileProcessing(fileExtension string, f
 	// Verify that the original content is no longer present (no duplication)
 	for i := 0; i < fileCount; i++ {
 		var originalContent string
-		if fileExtension == ".js" {
+		switch fileExtension {
+		case ".js":
 			originalContent = fmt.Sprintf("Content from %s file %d", fileType, i+1)
-		} else if fileExtension == ".css" {
+		case ".css":
 			originalContent = fmt.Sprintf("content:\"Content from %s file %d\"", fileType, i+1)
 		}
 		if strings.Contains(updatedContentStr, originalContent) {

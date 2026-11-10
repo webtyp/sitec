@@ -498,7 +498,7 @@ func (c *Compiler) LoadStaticAssets() error {
 	site := c.site
 	rootDir := ""
 	if c.Config != nil {
-		rootDir = c.Config.RootDir
+		rootDir = c.RootDir
 	}
 	c.mu.Unlock()
 
