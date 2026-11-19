@@ -46,24 +46,42 @@ func buildHTMLShell(o htmlShellOptions) (openHTML, closeHTML []byte) {
 	head.WriteString("\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n")
 	head.WriteString("\t<title></title>\n")
 	if o.faviconLinks != "" {
-		head.WriteString("\t" + o.faviconLinks + "\n")
+		head.WriteByte('\t')
+		head.WriteString(o.faviconLinks)
+		head.WriteByte('\n')
 	}
 	if o.spriteURL != "" {
-		head.WriteString("\t<meta name=\"" + svg.SpriteMetaName + "\" content=\"" + o.spriteURL + "\">\n")
+		head.WriteString("\t<meta name=\"")
+		head.WriteString(svg.SpriteMetaName)
+		head.WriteString("\" content=\"")
+		head.WriteString(o.spriteURL)
+		head.WriteString("\">\n")
 	}
 	if o.langURL != "" {
-		head.WriteString("\t<meta name=\"" + lang.MetaName + "\" content=\"" + o.langURL + "\">\n")
+		head.WriteString("\t<meta name=\"")
+		head.WriteString(lang.MetaName)
+		head.WriteString("\" content=\"")
+		head.WriteString(o.langURL)
+		head.WriteString("\">\n")
 	}
-	head.WriteString("\t<link rel=\"stylesheet\" href=\"" + o.cssURL + "\"")
+	head.WriteString("\t<link rel=\"stylesheet\" href=\"")
+	head.WriteString(o.cssURL)
+	head.WriteByte('"')
 	if o.cssIntegrity != "" {
-		head.WriteString(" integrity=\"" + o.cssIntegrity + "\" crossorigin=\"anonymous\"")
+		head.WriteString(" integrity=\"")
+		head.WriteString(o.cssIntegrity)
+		head.WriteString("\" crossorigin=\"anonymous\"")
 	}
 	head.WriteString(" type=\"text/css\" />\n</head>\n<body>")
 
 	var closeBuf strings.Builder
-	closeBuf.WriteString("</div>\n<script src=\"" + o.jsURL + "\"")
+	closeBuf.WriteString("</div>\n<script src=\"")
+	closeBuf.WriteString(o.jsURL)
+	closeBuf.WriteByte('"')
 	if o.jsIntegrity != "" {
-		closeBuf.WriteString(" integrity=\"" + o.jsIntegrity + "\" crossorigin=\"anonymous\"")
+		closeBuf.WriteString(" integrity=\"")
+		closeBuf.WriteString(o.jsIntegrity)
+		closeBuf.WriteString("\" crossorigin=\"anonymous\"")
 	}
 	closeBuf.WriteString(" type=\"text/javascript\"></script>\n</body>\n</html>")
 
