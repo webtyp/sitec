@@ -94,7 +94,7 @@ func TestTranslations_EmitsExternalFileAndMetaAfterScan(t *testing.T) {
 	}
 }
 
-func TestTranslations_LangJSONEditRebundlesWithoutSync(t *testing.T) {
+func TestTranslations_RefreshRebundlesWithoutSync(t *testing.T) {
 	c, _ := newTranslationsCompiler(t)
 	f := &fakeTranslations{payload: langPayload}
 	c.SetTranslations(f)
@@ -103,9 +103,7 @@ func TestTranslations_LangJSONEditRebundlesWithoutSync(t *testing.T) {
 	}
 
 	f.set([]byte(`{"default":"fr"}`), nil)
-	if err := c.NewFileEvent("lang.json", ".json", "/p/config/lang.json", "write"); err != nil {
-		t.Fatal(err)
-	}
+	c.RefreshTranslations()
 	if f.syncs != 1 {
 		t.Errorf("a lang.json edit must not sync: SyncTranslations calls = %d, want 1", f.syncs)
 	}
@@ -118,18 +116,9 @@ func TestTranslations_LangJSONEditRebundlesWithoutSync(t *testing.T) {
 	if !found {
 		t.Errorf("external lang.<hash>.json must carry the re-bundled dictionary")
 	}
-
-	// Any other .json is not ours.
-	before := f.bundles
-	if err := c.NewFileEvent("package.json", ".json", "/p/package.json", "write"); err != nil {
-		t.Fatal(err)
-	}
-	if f.bundles != before {
-		t.Errorf("a non-dictionary .json must not re-bundle")
-	}
 }
 
-func TestTranslations_BundleErrorKeepsPreviousAndLogsOnce(t *testing.T) {
+func TestTranslations_BundleErrorKeepsPreviousAndStaysSilent(t *testing.T) {
 	c, logs := newTranslationsCompiler(t)
 	f := &fakeTranslations{payload: langPayload}
 	c.SetTranslations(f)
@@ -146,14 +135,8 @@ func TestTranslations_BundleErrorKeepsPreviousAndLogsOnce(t *testing.T) {
 	if got := indexHTML(t, c); !strings.Contains(got, "webtyp-lang") {
 		t.Errorf("a bundle error must keep the previous meta tag, got:\n%s", got)
 	}
-	n := 0
-	for _, l := range *logs {
-		if strings.Contains(l, "boom") {
-			n++
-		}
-	}
-	if n != 1 {
-		t.Errorf("a persisting error must be logged once, logged %d times: %v", n, *logs)
+	if len(*logs) != 0 {
+		t.Errorf("the provider reports its own errors; the compiler must not: %v", *logs)
 	}
 }
 

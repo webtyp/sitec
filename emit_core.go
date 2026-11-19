@@ -156,7 +156,6 @@ type Compiler struct {
 	translationsMu      sync.RWMutex
 	translations        Translations // nil: no dictionary is emitted
 	translationsJSON    []byte       // merged dictionary JSON bytes
-	translationsLastErr string       // last reported error, so a persisting one is logged once
 	scanned             bool         // a full module scan landed: from here on a module reload syncs the dictionary itself
 }
 
@@ -194,10 +193,6 @@ type ImageProcessor interface {
 	Artifacts() []imgmin.Artifact
 }
 
-// translationsFileName is the dictionary file: config/lang.json in a project,
-// lang.json at a library's module root. An edit to it re-bundles the dictionary.
-const translationsFileName = "lang.json"
-
 // Translations keeps the project's translation files in step with its code and
 // produces the merged dictionary JSON bytes for external serving.
 // webtyp.com/lang/langc implements it; the app injects it.
@@ -218,8 +213,8 @@ func (c *Compiler) SetTranslations(t Translations) {
 
 // refreshTranslations syncs (when sync is true) and re-bundles the dictionary,
 // and updates the external lang.<hash>.json asset + HTML meta when changed. A failure never
-// blocks the build: it is reported once while it persists, and the previous
-// asset stays. Must be called WITHOUT c.mu held: the provider may take time,
+// blocks the build and the previous asset stays; the provider owns the report
+// of its own errors (the translations handler says them under its label). Must be called WITHOUT c.mu held: the provider may take time,
 // and updating the lang asset acquires c.mu.
 func (c *Compiler) refreshTranslations(sync bool) {
 	c.translationsMu.RLock()
@@ -228,38 +223,19 @@ func (c *Compiler) refreshTranslations(sync bool) {
 	if t == nil {
 		return
 	}
-	ok := true
 	if sync {
-		if err := t.SyncTranslations(c.RootDir); err != nil {
-			c.reportTranslationsErr("translations sync error:", err)
-			ok = false
-		}
+		_ = t.SyncTranslations(c.RootDir) // a failure is the provider's to report
 	}
 	payload, err := t.BundleTranslations(c.RootDir)
 	if err != nil {
-		c.reportTranslationsErr("translations bundle error:", err)
 		return
 	}
 	c.translationsMu.Lock()
 	changed := !bytes.Equal(payload, c.translationsJSON)
 	c.translationsJSON = append([]byte(nil), payload...)
-	if ok {
-		c.translationsLastErr = ""
-	}
 	c.translationsMu.Unlock()
 	if changed {
 		c.updateLangAsset(payload)
-	}
-}
-
-func (c *Compiler) reportTranslationsErr(prefix string, err error) {
-	msg := prefix + " " + err.Error()
-	c.translationsMu.Lock()
-	repeated := msg == c.translationsLastErr
-	c.translationsLastErr = msg
-	c.translationsMu.Unlock()
-	if !repeated {
-		c.writeMessage(prefix, err)
 	}
 }
 
@@ -736,7 +712,7 @@ func (c *Compiler) Logger(messages ...any) {
 }
 
 func (c *Compiler) SupportedExtensions() []string {
-	return []string{".js", ".css", ".svg", ".html", ".json"}
+	return []string{".js", ".css", ".svg", ".html"}
 }
 
 func (c *Compiler) writeMessage(messages ...any) {
@@ -927,3 +903,10 @@ func (c *Compiler) List() []Artifact {
 }
 
 // assetmin v0.5.0: updated for svg v0.0.5
+
+// RefreshTranslations re-bundles the dictionary after its files changed. The
+// orchestrator calls it once the translations handler has judged the edit; the
+// generator is not run (it must not rewrite a dictionary on every keystroke).
+func (c *Compiler) RefreshTranslations() {
+	c.refreshTranslations(false)
+}
