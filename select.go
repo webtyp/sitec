@@ -23,15 +23,6 @@ func findProjectRoot(startDir string) (string, error) {
 	}
 }
 
-func containsModule(mods []module, m module) bool {
-	for _, x := range mods {
-		if x.path == m.path && x.dir == m.dir {
-			return true
-		}
-	}
-	return false
-}
-
 func expandToSSRPackages(modules []module, scanner *scanner, assetLibraries []string) []module {
 	var out []module
 	seen := make(map[string]bool)

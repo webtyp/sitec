@@ -122,14 +122,19 @@ func TestSvgSpriteRefactoring(t *testing.T) {
 			t.Errorf("Expected sprite to contain 'dup' icon")
 		}
 
-		// Count occurrences of id="dup"
+		// Trigger sprite generation and verify external sprite artifact has id="dup" once
 		if err := am.RegenerateHTMLCache(); err != nil {
 			t.Fatalf("RegenerateHTMLCache failed: %v", err)
 		}
-		html := string(am.GetCachedHTML())
-		count := strings.Count(html, "id=\"dup\"")
+		var spriteContent string
+		for _, a := range am.List() {
+			if strings.HasPrefix(strings.TrimPrefix(a.Path, "/"), "sprite.") && strings.HasSuffix(a.Path, ".svg") {
+				spriteContent = string(a.Content)
+			}
+		}
+		count := strings.Count(spriteContent, "id=\"dup\"")
 		if count != 1 {
-			t.Errorf("Expected id='dup' to appear exactly once, got %d", count)
+			t.Errorf("Expected id='dup' to appear exactly once in external sprite, got %d (%s)", count, spriteContent)
 		}
 	})
 
@@ -150,9 +155,14 @@ func TestSvgSpriteRefactoring(t *testing.T) {
 		if err := am.RegenerateHTMLCache(); err != nil {
 			t.Fatal(err)
 		}
-		html := string(am.GetCachedHTML())
-		if strings.Count(html, "id=\"ia\"") != 1 || strings.Count(html, "id=\"ib\"") != 1 {
-			t.Errorf("Expected each icon to appear exactly once")
+		var spriteContent string
+		for _, a := range am.List() {
+			if strings.HasPrefix(strings.TrimPrefix(a.Path, "/"), "sprite.") && strings.HasSuffix(a.Path, ".svg") {
+				spriteContent = string(a.Content)
+			}
+		}
+		if strings.Count(spriteContent, "id=\"ia\"") != 1 || strings.Count(spriteContent, "id=\"ib\"") != 1 {
+			t.Errorf("Expected each icon to appear exactly once in external sprite: %s", spriteContent)
 		}
 	})
 

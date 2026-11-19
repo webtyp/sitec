@@ -53,7 +53,16 @@ func TestPagesCarryEveryModulesIcons(t *testing.T) {
 	}
 	page := string(pageBytes)
 
-	if !strings.Contains(page, `id="nav-menu"`) {
-		t.Errorf("index.html sprite is missing the dependency's symbol, so every <use href=\"#nav-menu\"> in the body resolves to nothing:\n%s", page)
+	var spriteBody string
+	for _, a := range am.List() {
+		if strings.HasPrefix(strings.TrimPrefix(a.Path, "/"), "sprite.") && strings.HasSuffix(a.Path, ".svg") {
+			spriteBody = string(a.Content)
+		}
+	}
+	if !strings.Contains(spriteBody, `id="nav-menu"`) {
+		t.Errorf("external sprite is missing the dependency's symbol:\n%s", spriteBody)
+	}
+	if !strings.Contains(page, `#nav-menu`) || !strings.Contains(page, `sprite.`) {
+		t.Errorf("index.html must rewrite <use href> to external sprite.<hash>.svg#nav-menu:\n%s", page)
 	}
 }

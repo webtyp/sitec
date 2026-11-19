@@ -6,17 +6,17 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.8
 	webtyp.com/artifacts v0.1.1
 	webtyp.com/css v0.4.30
-	webtyp.com/dom v0.13.29
-	webtyp.com/fmt v1.0.0
+	webtyp.com/dom v0.13.32
+	webtyp.com/fmt v1.0.3
 	webtyp.com/font v0.0.5
-	webtyp.com/html v0.0.30
+	webtyp.com/html v0.0.34
 	webtyp.com/image v0.1.16
-	webtyp.com/js v0.1.0
-	webtyp.com/lang v0.1.16
+	webtyp.com/js v0.1.6
+	webtyp.com/lang v0.1.20
 	webtyp.com/modfind v0.0.11
 	webtyp.com/pwa v0.2.13
-	webtyp.com/router v0.5.0
-	webtyp.com/svg v0.3.30
+	webtyp.com/router v0.5.8
+	webtyp.com/svg v0.3.43
 	webtyp.com/tinygo v1.0.1
 )
 
@@ -30,8 +30,9 @@ require (
 	webtyp.com/context v0.0.23 // indirect
 	webtyp.com/device v0.1.0 // indirect
 	webtyp.com/escape v0.1.0 // indirect
-	webtyp.com/fetch v0.1.28 // indirect
+	webtyp.com/fetch v0.1.30 // indirect
+	webtyp.com/filepath v0.1.3 // indirect
 	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/json v0.5.40 // indirect
-	webtyp.com/model v0.2.21 // indirect
+	webtyp.com/model v0.2.26 // indirect
 )

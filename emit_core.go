@@ -1,6 +1,7 @@
 package sitec
 
 import (
+	"bytes"
 	"os"
 	"path"
 	"path/filepath"
@@ -114,6 +115,12 @@ type Compiler struct {
 	mainJsHandler       *asset
 	faviconSvgHandler   *asset
 	indexHtmlHandler    *asset
+	spriteAsset         *asset
+	langAsset           *asset
+	cspAsset            *asset
+	spriteURL           string
+	translationsURL     string
+	hasPages            bool
 	min                 *minify.M
 	ssrEnabled          bool              // SSR branch activation flag
 	InitialLoadFailed   bool              // true tras agotar los reintentos de ExtractAll; el próximo evento SSR debe reintentar el escaneo completo
@@ -147,8 +154,8 @@ type Compiler struct {
 	wasmMu              sync.Mutex
 	directArtifacts     []Artifact // pre-built binaries written via Write(), e.g. the WASM binary
 	translationsMu      sync.RWMutex
-	translations        Translations // nil: no dictionary is inlined (English)
-	translationsHTML    string       // the <script id="webtyp-lang"> element, inlined in index.html
+	translations        Translations // nil: no dictionary is emitted
+	translationsJSON    []byte       // merged dictionary JSON bytes
 	translationsLastErr string       // last reported error, so a persisting one is logged once
 	scanned             bool         // a full module scan landed: from here on a module reload syncs the dictionary itself
 }
@@ -192,18 +199,17 @@ type ImageProcessor interface {
 const translationsFileName = "lang.json"
 
 // Translations keeps the project's translation files in step with its code and
-// produces the element the client reads its dictionary from.
+// produces the merged dictionary JSON bytes for external serving.
 // webtyp.com/lang/langc implements it; the app injects it.
 type Translations interface {
 	// SyncTranslations updates <rootDir>/config/lang.json from the code.
 	SyncTranslations(rootDir string) error
-	// BundleTranslations returns the complete <script type="application/json" ...>
-	// element with the merged dictionary, or "" when there is nothing to ship.
-	BundleTranslations(rootDir string) (string, error)
+	// BundleTranslations returns the merged dictionary JSON bytes, or nil/empty when there is nothing to ship.
+	BundleTranslations(rootDir string) ([]byte, error)
 }
 
 // SetTranslations installs the translations provider. Without it, no dictionary
-// is inlined and the client shows English.
+// is emitted and the client shows English.
 func (c *Compiler) SetTranslations(t Translations) {
 	c.translationsMu.Lock()
 	c.translations = t
@@ -211,10 +217,10 @@ func (c *Compiler) SetTranslations(t Translations) {
 }
 
 // refreshTranslations syncs (when sync is true) and re-bundles the dictionary,
-// and invalidates the HTML when the inlined element changed. A failure never
+// and updates the external lang.<hash>.json asset + HTML meta when changed. A failure never
 // blocks the build: it is reported once while it persists, and the previous
-// element stays. Must be called WITHOUT c.mu held: the provider may take time,
-// and invalidating the HTML takes the HTML lock (same order rule as setModuleSprite).
+// asset stays. Must be called WITHOUT c.mu held: the provider may take time,
+// and updating the lang asset acquires c.mu.
 func (c *Compiler) refreshTranslations(sync bool) {
 	c.translationsMu.RLock()
 	t := c.translations
@@ -229,20 +235,20 @@ func (c *Compiler) refreshTranslations(sync bool) {
 			ok = false
 		}
 	}
-	html, err := t.BundleTranslations(c.RootDir)
+	payload, err := t.BundleTranslations(c.RootDir)
 	if err != nil {
 		c.reportTranslationsErr("translations bundle error:", err)
 		return
 	}
 	c.translationsMu.Lock()
-	changed := html != c.translationsHTML
-	c.translationsHTML = html
+	changed := !bytes.Equal(payload, c.translationsJSON)
+	c.translationsJSON = append([]byte(nil), payload...)
 	if ok {
 		c.translationsLastErr = ""
 	}
 	c.translationsMu.Unlock()
 	if changed {
-		c.indexHtmlHandler.InvalidateCache()
+		c.updateLangAsset(payload)
 	}
 }
 
@@ -352,6 +358,7 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 			break
 		}
 	}
+	c.hasPages = hasPages
 
 	cssFile := filepath.Base(c.mainStyleCssHandler.urlPath)
 	jsFile := filepath.Base(c.mainJsHandler.urlPath)
@@ -533,8 +540,9 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 		}
 	}
 	c.resolveAndApplyRootCSS()
+	c.refreshSpriteAssetLocked()
 
-	// 3. Render pages, now that the icon sprite holds every module's glyphs.
+	// 3. Render pages, now that the external sprite holds every module's glyphs.
 	for _, a := range all {
 		if a == nil {
 			continue
@@ -558,6 +566,7 @@ func (c *Compiler) routeExtractedAssets(all []*Assets) error {
 		c.emitSitemapNoLock()
 	}
 
+	c.refreshSecurityAssetsLocked()
 	return nil
 }
 
@@ -591,10 +600,12 @@ func (c *Compiler) ReloadSSRModule(moduleDir string) error {
 	err = c.routeAssets(a, a.IsRoot, a.IsFramework)
 	if err == nil {
 		c.resolveAndApplyRootCSS()
+		c.refreshSpriteAssetLocked()
 		// Same order as the full pass: assets first, then pages. Here the
 		// other modules' glyphs are already registered from the initial load,
 		// so re-rendering this module's pages picks up the complete sprite.
 		err = c.emitPages(a)
+		c.refreshSecurityAssetsLocked()
 	}
 	c.mu.Unlock()
 	if err == nil {
@@ -694,22 +705,6 @@ func NewCompiler(ac *Config) *Compiler {
 		c.allAssets[a.outputPath] = a
 	}
 
-	// The icon sprite lives only inside the HTML: a <symbol> referenced by href="#id" from the
-	// same document is the one form CSS can style and the DOM can manipulate. There is no
-	// separate icons.svg file.
-	c.indexHtmlHandler.AddDynamicContent(func() []byte {
-		return []byte(c.renderSprite())
-	})
-
-	// The translations dictionary lives inside the HTML too, right after the
-	// sprite: in <body>, before #app and before the client <script>, so it
-	// exists when the WASM starts and lang reads it synchronously.
-	c.indexHtmlHandler.AddDynamicContent(func() []byte {
-		c.translationsMu.RLock()
-		defer c.translationsMu.RUnlock()
-		return []byte(c.translationsHTML)
-	})
-
 	// @font-face from the root declaration. Read inside the closure so a later
 	// ReloadSSRModule updates the CSS without re-registering.
 	prefix := path.Join("/", ac.AssetsURLPrefix)
@@ -785,40 +780,15 @@ func (c *Compiler) RefreshJSAssets() {
 	c.refreshAsset(".js")
 }
 
-// readGoModulePath extracts the module path from go.mod (e.g., "example.com/demo")
-func readGoModulePath(rootDir string) (string, error) {
-	gomodPath := filepath.Join(rootDir, "go.mod")
-	content, err := os.ReadFile(gomodPath)
-	if err != nil {
-		return "", err
-	}
-
-	lines := string(content)
-	newlineIdx := findIndex(lines, "\n")
-	if newlineIdx < 0 {
-		newlineIdx = len(lines)
-	}
-	firstLine := lines[:newlineIdx]
-
-	if len(firstLine) > 7 && firstLine[:7] == "module " {
-		return firstLine[7:], nil
-	}
-	return "", fmt.Err("no module line in go.mod")
-}
-
-func findIndex(s string, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
-}
-
 // FS implementation for Compiler:
 func (c *Compiler) Read(p string) ([]byte, string, bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.indexHtmlHandler != nil && !c.indexHtmlHandler.isCacheValid() {
+		c.refreshSpriteAssetLocked()
+		c.refreshSecurityAssetsLocked()
+	}
 
 	urlKey := p
 	if !strings.HasPrefix(urlKey, "/") {
@@ -936,6 +906,10 @@ func writeTo(fs FS, outPath, fullPath string, content []byte, mediatype string) 
 func (c *Compiler) List() []Artifact {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	if c.indexHtmlHandler != nil && !c.indexHtmlHandler.isCacheValid() {
+		c.refreshSpriteAssetLocked()
+		c.refreshSecurityAssetsLocked()
+	}
 	var out []Artifact
 	for _, a := range c.allAssets {
 		content, err := a.GetMinifiedContent(c.activeMinifier())

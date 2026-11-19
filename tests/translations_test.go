@@ -10,12 +10,12 @@ import (
 )
 
 // fakeTranslations is the test double for sitec.Translations: it records the
-// calls and returns a configurable element or error.
+// calls and returns a configurable JSON payload or error.
 type fakeTranslations struct {
 	mu        sync.Mutex
 	syncs     int
 	bundles   int
-	html      string
+	payload   []byte
 	bundleErr error
 }
 
@@ -26,20 +26,20 @@ func (f *fakeTranslations) SyncTranslations(string) error {
 	return nil
 }
 
-func (f *fakeTranslations) BundleTranslations(string) (string, error) {
+func (f *fakeTranslations) BundleTranslations(string) ([]byte, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.bundles++
-	return f.html, f.bundleErr
+	return f.payload, f.bundleErr
 }
 
-func (f *fakeTranslations) set(html string, err error) {
+func (f *fakeTranslations) set(payload []byte, err error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.html, f.bundleErr = html, err
+	f.payload, f.bundleErr = payload, err
 }
 
-const langElement = `<script type="application/json" id="webtyp-lang">{"default":"es"}</script>`
+var langPayload = []byte(`{"default":"es"}`)
 
 func newTranslationsCompiler(t *testing.T) (*sitec.Compiler, *[]string) {
 	t.Helper()
@@ -64,9 +64,9 @@ func indexHTML(t *testing.T, c *sitec.Compiler) string {
 	return string(c.GetCachedHTML())
 }
 
-func TestTranslations_InlinedAfterScan(t *testing.T) {
+func TestTranslations_EmitsExternalFileAndMetaAfterScan(t *testing.T) {
 	c, _ := newTranslationsCompiler(t)
-	f := &fakeTranslations{html: langElement}
+	f := &fakeTranslations{payload: langPayload}
 	c.SetTranslations(f)
 
 	if err := c.RouteExtractedAssets(nil); err != nil {
@@ -76,42 +76,47 @@ func TestTranslations_InlinedAfterScan(t *testing.T) {
 		t.Errorf("SyncTranslations calls = %d, want 1", f.syncs)
 	}
 	got := indexHTML(t, c)
-	if strings.Count(got, `id="webtyp-lang"`)+strings.Count(got, `id=webtyp-lang`) != 1 {
-		t.Fatalf("want the dictionary element exactly once, got:\n%s", got)
+	if strings.Contains(got, "<script type=\"application/json\"") || strings.Contains(got, "id=\"webtyp-lang\"") {
+		t.Fatalf("index.html must not inline dictionary <script>, got:\n%s", got)
 	}
-	el := strings.Index(got, "webtyp-lang")
-	app := strings.Index(got, `id="app"`)
-	if app < 0 {
-		app = strings.Index(got, `id=app`)
+	if !strings.Contains(got, `name="webtyp-lang"`) {
+		t.Fatalf("index.html must carry <meta name=\"webtyp-lang\">, got:\n%s", got)
 	}
-	if app < 0 {
-		t.Fatalf("no #app mount point in:\n%s", got)
+	var langArt *sitec.Artifact
+	for _, a := range c.List() {
+		a := a
+		if strings.HasPrefix(strings.TrimPrefix(a.Path, "/"), "lang.") && strings.HasSuffix(a.Path, ".json") {
+			langArt = &a
+		}
 	}
-	if el > app {
-		t.Errorf("dictionary must come before #app:\n%s", got)
-	}
-	if js := strings.Index(got, "<script src"); js >= 0 && el > js {
-		t.Errorf("dictionary must come before the client script:\n%s", got)
+	if langArt == nil || string(langArt.Content) != string(langPayload) {
+		t.Fatalf("expected external lang.<hash>.json artifact with %s, got %+v", langPayload, langArt)
 	}
 }
 
 func TestTranslations_LangJSONEditRebundlesWithoutSync(t *testing.T) {
 	c, _ := newTranslationsCompiler(t)
-	f := &fakeTranslations{html: langElement}
+	f := &fakeTranslations{payload: langPayload}
 	c.SetTranslations(f)
 	if err := c.RouteExtractedAssets(nil); err != nil {
 		t.Fatal(err)
 	}
 
-	f.set(`<script type="application/json" id="webtyp-lang">{"default":"fr"}</script>`, nil)
+	f.set([]byte(`{"default":"fr"}`), nil)
 	if err := c.NewFileEvent("lang.json", ".json", "/p/config/lang.json", "write"); err != nil {
 		t.Fatal(err)
 	}
 	if f.syncs != 1 {
 		t.Errorf("a lang.json edit must not sync: SyncTranslations calls = %d, want 1", f.syncs)
 	}
-	if got := indexHTML(t, c); !strings.Contains(got, `"fr"`) {
-		t.Errorf("HTML must carry the re-bundled dictionary, got:\n%s", got)
+	var found bool
+	for _, a := range c.List() {
+		if strings.HasPrefix(strings.TrimPrefix(a.Path, "/"), "lang.") && strings.Contains(string(a.Content), `"fr"`) {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("external lang.<hash>.json must carry the re-bundled dictionary")
 	}
 
 	// Any other .json is not ours.
@@ -126,20 +131,20 @@ func TestTranslations_LangJSONEditRebundlesWithoutSync(t *testing.T) {
 
 func TestTranslations_BundleErrorKeepsPreviousAndLogsOnce(t *testing.T) {
 	c, logs := newTranslationsCompiler(t)
-	f := &fakeTranslations{html: langElement}
+	f := &fakeTranslations{payload: langPayload}
 	c.SetTranslations(f)
 	if err := c.RouteExtractedAssets(nil); err != nil {
 		t.Fatal(err)
 	}
 
-	f.set("", errors.New("boom"))
+	f.set(nil, errors.New("boom"))
 	for i := 0; i < 3; i++ {
 		if err := c.RouteExtractedAssets(nil); err != nil {
 			t.Fatal(err)
 		}
 	}
 	if got := indexHTML(t, c); !strings.Contains(got, "webtyp-lang") {
-		t.Errorf("a bundle error must keep the previous element, got:\n%s", got)
+		t.Errorf("a bundle error must keep the previous meta tag, got:\n%s", got)
 	}
 	n := 0
 	for _, l := range *logs {
@@ -158,7 +163,7 @@ func TestTranslations_NoProviderNoElement(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got := indexHTML(t, c); strings.Contains(got, "webtyp-lang") {
-		t.Errorf("without SetTranslations no dictionary is inlined, got:\n%s", got)
+		t.Errorf("without SetTranslations no dictionary meta is emitted, got:\n%s", got)
 	}
 }
 
@@ -179,7 +184,7 @@ func (rootExtractor) ExtractAll() ([]*sitec.Assets, error) {
 // each extra sync repeated every lang diagnostic in the TUI.
 func TestTranslations_SyncOncePerStartup(t *testing.T) {
 	c, _ := newTranslationsCompiler(t)
-	f := &fakeTranslations{html: langElement}
+	f := &fakeTranslations{payload: langPayload}
 	c.SetTranslations(f)
 	c.SetSSRExtractor(rootExtractor{})
 	c.EnableSSRMode()

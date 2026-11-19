@@ -165,6 +165,18 @@ func (c *Compiler) processAsset(fh *asset) error {
 	if err := fh.RegenerateCache(c.activeMinifier()); err != nil {
 		return err
 	}
+	if fh == c.mainStyleCssHandler || fh == c.mainJsHandler {
+		c.refreshSecurityAssetsLocked()
+		if c.indexHtmlHandler != nil {
+			_ = c.indexHtmlHandler.RegenerateCache(c.activeMinifier())
+			if c.diskMirrored {
+				_ = c.fs.Write(c.indexHtmlHandler.outputPath, c.indexHtmlHandler.GetCachedMinified(), c.indexHtmlHandler.mediatype)
+				if c.cspAsset != nil {
+					_ = c.fs.Write(c.cspAsset.outputPath, c.cspAsset.GetCachedMinified(), c.cspAsset.mediatype)
+				}
+			}
+		}
+	}
 
 	// 2. Write to disk only if enabled
 	if c.diskMirrored {

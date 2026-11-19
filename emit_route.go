@@ -95,11 +95,18 @@ func (c *Compiler) routeAssets(a *Assets, isRoot, isFramework bool) error {
 // was rendered before a single dependency had contributed, so the sprite went
 // out empty and every <use href="#…"> in the markup resolved to nothing.
 func (c *Compiler) emitPages(a *Assets) error {
+	cssSRI, jsSRI := c.computeBundleSRIs()
 	for _, p := range a.Pages {
 		outPath, urlPath := normalizePagePath(p.Path)
 		doc := p.Doc
 		if doc.CSSURL == "" {
 			doc.CSSURL = c.mainStyleCssHandler.GetURLPath()
+		}
+		if doc.CSSIntegrity == "" && doc.CSSURL == c.mainStyleCssHandler.GetURLPath() {
+			doc.CSSIntegrity = cssSRI
+		}
+		if doc.JSIntegrity == "" && doc.JSURL != "" && doc.JSURL == c.mainJsHandler.GetURLPath() {
+			doc.JSIntegrity = jsSRI
 		}
 		if doc.FaviconURL == "" {
 			doc.FaviconURL = c.getFirstFaviconURL()
@@ -108,7 +115,7 @@ func (c *Compiler) emitPages(a *Assets) error {
 			doc.Canonical = resolveAbsoluteURL(c.SiteURL, doc.Canonical)
 		}
 
-		bodyContent := c.renderSpriteNoLock() + p.Body
+		bodyContent := rewriteSpriteRefs(p.Body, c.spriteURL)
 		rendered := twhtml.DocumentString(doc, &pageBodyComponent{content: bodyContent})
 
 		pageAsset := newAssetFile(outPath, "text/html", c.Config, nil)

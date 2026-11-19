@@ -32,12 +32,16 @@ func TestAssets(t *testing.T) {
 				t.Errorf("File %s not found in output directory", file)
 			}
 		}
-		// The icon sprite lives only inside the HTML: no icons.svg is ever written.
-		if _, err := os.Stat(filepath.Join(env.OutDir, "icons.svg")); err == nil {
-			t.Error("icons.svg was written; the sprite must live only in index.html")
+		// The icon sprite lives in external sprite.<hash>.svg and index.html carries <meta name="webtyp-sprite">.
+		spriteFiles, _ := filepath.Glob(filepath.Join(env.OutDir, "sprite.*.svg"))
+		if len(spriteFiles) != 1 {
+			t.Fatalf("expected 1 sprite.*.svg file, got: %v", spriteFiles)
 		}
-		if html, err := os.ReadFile(filepath.Join(env.OutDir, "index.html")); err != nil || !strings.Contains(string(html), `id="icon.svg"`) {
-			t.Errorf("index.html does not carry the icon symbol: %v", err)
+		if spriteData, err := os.ReadFile(spriteFiles[0]); err != nil || !strings.Contains(string(spriteData), `id="icon.svg"`) {
+			t.Errorf("external sprite does not carry the icon symbol: %v", err)
+		}
+		if html, err := os.ReadFile(filepath.Join(env.OutDir, "index.html")); err != nil || strings.Contains(string(html), "<svg") || !strings.Contains(string(html), `name="webtyp-sprite"`) {
+			t.Errorf("index.html must reference external sprite via meta without inline <svg>: %v", err)
 		}
 		env.CleanDirectory()
 	})

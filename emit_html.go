@@ -2,55 +2,23 @@ package sitec
 
 import "strings"
 
-type htmlHandler struct {
-	*asset
-	cssURL string
-	jsURL  string
-}
-
-// generateStylesheetLink returns HTML tag for linking a CSS stylesheet
-func (h *htmlHandler) generateStylesheetLink() []byte {
-	return []byte(`<link rel="stylesheet" href="` + h.cssURL + `" type="text/css" />`)
-}
-
-// generateJavaScriptTag returns HTML script tag for a JavaScript file
-func (h *htmlHandler) generateJavaScriptTag() []byte {
-	return []byte(`<script src="` + h.jsURL + `" type="text/javascript"></script>`)
-}
-
 // NewHtmlHandler creates an HTML asset handler using the provided output filename
 func NewHtmlHandler(ac *Config, outputName, cssURL, jsURL, faviconURL string) *asset {
 	af := newAssetFile(outputName, "text/html", ac, nil)
+	_ = faviconURL
 
-	hh := &htmlHandler{
-		asset:  af,
+	openHTML, closeHTML := buildHTMLShell(htmlShellOptions{
 		cssURL: cssURL,
 		jsURL:  jsURL,
-	}
-	// faviconURL is kept for backwards compatibility but ignored; favicon links are now
-	// emitted dynamically via Compiler.updateHtmlFaviconLinks based on derived files.
-	_ = faviconURL
-	//  default marcador de inicio index HTML — initially without favicon links;
-	//  Compiler.updateHtmlFaviconLinks will rewrite this after favicon derivation.
+	})
 	af.contentOpen = append(af.contentOpen, &ContentFile{
-		Path: "index-open.html",
-		Content: []byte(`<!doctype html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-	<title></title>
-	` + string(hh.generateStylesheetLink()) + `
-</head>
-<body>`),
+		Path:    "index-open.html",
+		Content: openHTML,
 	})
 
 	// El HTML de los módulos (contentMiddle) debe caer DENTRO del punto de
 	// montaje `#app`, para que el servidor sirva ya el markup renderizado y el
-	// primer Render() del WASM lo reemplace sin salto visual. El marcador de
-	// apertura NO va al final de contentOpen: los símbolos SVG (dynamicContent)
-	// se escriben entre contentOpen y contentMiddle, y deben quedar FUERA de
-	// #app — el primer Render() pisa innerHTML de #app y borraría los íconos.
+	// primer Render() del WASM lo reemplace sin salto visual.
 	// Se siembra como primera entrada de contentMiddle; Path "!app" ordena
 	// antes que cualquier nombre de módulo real (rutas de imports Go).
 	af.contentMiddle = append(af.contentMiddle, &ContentFile{
@@ -60,11 +28,8 @@ func NewHtmlHandler(ac *Config, outputName, cssURL, jsURL, faviconURL string) *a
 
 	// default marcador de cierre index HTML
 	af.contentClose = append(af.contentClose, &ContentFile{
-		Path: "index-close.html",
-		Content: []byte(`</div>
-` + string(hh.generateJavaScriptTag()) + `
-</body>
-</html>`),
+		Path:    "index-close.html",
+		Content: closeHTML,
 	})
 
 	return af

@@ -10,12 +10,6 @@ import (
 	"webtyp.com/image/favicon"
 )
 
-func (c *Compiler) setFaviconFiles(files []favicon.File) {
-	c.faviconMu.Lock()
-	defer c.faviconMu.Unlock()
-	c.faviconFiles = files
-}
-
 func (c *Compiler) getFaviconFiles() []favicon.File {
 	c.faviconMu.RLock()
 	defer c.faviconMu.RUnlock()
@@ -100,60 +94,8 @@ func buildFaviconHeadLinks(files []favicon.File, prefix string) []byte {
 }
 
 func (c *Compiler) updateHtmlFaviconLinks() {
-	files := c.getFaviconFiles()
-	prefix := ""
-	if c.Config != nil {
-		prefix = c.AssetsURLPrefix
-	}
-	links := buildFaviconHeadLinks(files, prefix)
-	if len(links) == 0 && c.hasManualFaviconContent() {
-		href := c.faviconSvgHandler.GetURLPath()
-		links = []byte(`<link rel="icon" type="image/svg+xml" href="` + href + `">`)
-	}
-	cssURL := ""
-	jsURL := ""
-	if c.mainStyleCssHandler != nil {
-		cssURL = c.mainStyleCssHandler.GetURLPath()
-	}
-	if c.mainJsHandler != nil {
-		jsURL = c.mainJsHandler.GetURLPath()
-	}
-	var linkSection string
-	if len(links) > 0 {
-		linkSection = string(links) + "\n\t"
-	}
-	openContent := []byte(`<!doctype html>
-<html>
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-	<title></title>
-	` + linkSection + `<link rel="stylesheet" href="` + cssURL + `" type="text/css" />
-</head>
-<body>`)
-	if c.indexHtmlHandler == nil {
-		return
-	}
-	c.indexHtmlHandler.mu.Lock()
-	defer c.indexHtmlHandler.mu.Unlock()
-	if len(c.indexHtmlHandler.contentOpen) > 0 {
-		c.indexHtmlHandler.contentOpen[0].Content = openContent
-		c.indexHtmlHandler.cacheValid = false
-	} else {
-		c.indexHtmlHandler.contentOpen = append(c.indexHtmlHandler.contentOpen, &ContentFile{
-			Path:    "index-open.html",
-			Content: openContent,
-		})
-		c.indexHtmlHandler.cacheValid = false
-	}
-	closeContent := []byte(`</div>
-<script src="` + jsURL + `" type="text/javascript"></script>
-</body>
-</html>`)
-	if len(c.indexHtmlHandler.contentClose) > 0 {
-		c.indexHtmlHandler.contentClose[0].Content = closeContent
-		c.indexHtmlHandler.cacheValid = false
-	}
+	cssSRI, jsSRI := c.computeBundleSRIs()
+	c.updateHTMLShellWithSRIs(cssSRI, jsSRI)
 }
 
 // faviconSource is the icon of the project: docs/logo/logo.png (and the optional docs/logo/logo.svg beside

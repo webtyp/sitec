@@ -3,18 +3,11 @@
 package sitec_test
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"webtyp.com/sitec"
 )
-
-// Canonical viewport content. Both shells (html.go NewHtmlHandler and
-// templates/index_basic.html) must emit this exact string — see
-// docs/ARCHITECTURE.md "document shell is duplicated".
-const viewportContent = "width=device-width, initial-scale=1, viewport-fit=cover"
 
 func TestParseExistingHtmlContent(t *testing.T) {
 	t.Run("with_placeholder", func(t *testing.T) {
@@ -225,37 +218,5 @@ func TestDefaultHTMLContainsViewportFitCover(t *testing.T) {
 	// Minify may drop spaces inside the attribute; the token itself must survive.
 	if !strings.Contains(html, "viewport-fit=cover") {
 		t.Errorf("generated index.html must contain viewport-fit=cover\nGot:\n%s", html)
-	}
-}
-
-func extractViewportContent(src string) string {
-	const marker = `name="viewport" content="`
-	i := strings.Index(src, marker)
-	if i == -1 {
-		return ""
-	}
-	start := i + len(marker)
-	end := strings.Index(src[start:], `"`)
-	if end == -1 {
-		return ""
-	}
-	return src[start : start+end]
-}
-
-func moduleRoot(t *testing.T) string {
-	t.Helper()
-	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd: %v", err)
-	}
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("go.mod not found walking up from working directory")
-		}
-		dir = parent
 	}
 }

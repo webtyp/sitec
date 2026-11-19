@@ -34,12 +34,6 @@ func (m *multiPageProvider) RenderPages() []html.Page {
 	}
 }
 
-type singleHTMLProvider struct{}
-
-func (s *singleHTMLProvider) RenderHTML() string {
-	return "<div>Single Page Content</div>"
-}
-
 func TestEmitPages_MultiPageEmission(t *testing.T) {
 	ac := &sitec.Config{
 		OutputDir: "web/public",

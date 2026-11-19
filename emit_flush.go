@@ -49,6 +49,8 @@ func (c *Compiler) FlushToDisk() error {
 	}
 
 	c.mu.Lock()
+	c.refreshSpriteAssetLocked()
+	c.refreshSecurityAssetsLocked()
 	snapshots := make([]snapshot, 0, len(c.allAssets)+len(c.directArtifacts))
 
 	var regenErr error

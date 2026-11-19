@@ -95,17 +95,28 @@ replace webtyp.com/sitec => ` + repoRoot + "\n" + webtypReplaces(t)
 		t.Errorf("expected style.css to contain background-color, got: %s", string(cssContent))
 	}
 
-	// 3. The icon sprite lives only inside the HTML: no icons*.svg file, and index.html
-	// carries the consumer's symbol.
-	if matches, _ := filepath.Glob(filepath.Join(outDir, "icons*.svg")); len(matches) != 0 {
-		t.Errorf("a sprite file was written: %v; the sprite must live only in index.html", matches)
+	// 3. The icon sprite is written as an external hashed sprite.<hash>.svg and index.html
+	// carries <meta name="webtyp-sprite"> without inlining <svg>.
+	spriteFiles, _ := filepath.Glob(filepath.Join(outDir, "sprite.*.svg"))
+	if len(spriteFiles) != 1 {
+		t.Fatalf("expected 1 external sprite.*.svg file, got: %v", spriteFiles)
+	}
+	spriteBytes, err := os.ReadFile(spriteFiles[0])
+	if err != nil {
+		t.Fatalf("read sprite file: %v", err)
+	}
+	if !strings.Contains(string(spriteBytes), "consumer-icon") {
+		t.Errorf("expected external sprite to contain consumer-icon symbol, got: %s", string(spriteBytes))
 	}
 	htmlContent, err := os.ReadFile(filepath.Join(outDir, "index.html"))
 	if err != nil {
 		t.Fatalf("expected index.html to be emitted: %v", err)
 	}
-	if !strings.Contains(string(htmlContent), "consumer-icon") {
-		t.Errorf("expected index.html to contain the consumer-icon symbol")
+	if strings.Contains(string(htmlContent), "<svg") {
+		t.Errorf("index.html must not inline <svg> sprite")
+	}
+	if !strings.Contains(string(htmlContent), `name="webtyp-sprite"`) {
+		t.Errorf("index.html missing <meta name=\"webtyp-sprite\">")
 	}
 }
 

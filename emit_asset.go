@@ -185,6 +185,12 @@ func (h *asset) InvalidateCache() {
 	h.cacheValid = false
 }
 
+func (h *asset) isCacheValid() bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.cacheValid
+}
+
 // RegenerateCache generates the minified content for the asset and updates the cache.
 // It acquires a write lock to ensure thread-safe modification of the cache.
 func (h *asset) RegenerateCache(minifier *minify.M) error {

@@ -10,9 +10,6 @@ import (
 	"webtyp.com/router/mock"
 )
 
-// spriteMarkup identifica el sprite SVG inyectado por AddDynamicContent.
-const spriteMarkup = `aria-hidden="true" style="display:none"`
-
 // TestModuleHTMLInsideApp es la traba del plan: el RenderHTML() de un módulo
 // debe caer DENTRO de `<div id="app">` — para que la primera pintura del
 // servidor ya muestre el markup que el WASM va a renderizar — y los símbolos
@@ -50,13 +47,12 @@ func TestModuleHTMLInsideApp(t *testing.T) {
 		t.Errorf("module markup must be BETWEEN <div id=\"app\"> and </div>\nbetween:\n%s\nfull:\n%s", between, got)
 	}
 
-	// Los símbolos SVG quedan antes de <div id="app">
-	spriteIdx := strings.Index(got, spriteMarkup)
-	if spriteIdx == -1 {
-		t.Fatalf("html must contain the SVG sprite\nGot:\n%s", got)
+	// El HTML nunca lleva el sprite SVG incrustado; expone su ruta externa en <meta name="webtyp-sprite">.
+	if strings.Contains(got, "<svg") {
+		t.Errorf("index.html must not inline <svg> sprite\nGot:\n%s", got)
 	}
-	if spriteIdx > appOpenIdx {
-		t.Error("SVG sprite must appear BEFORE <div id=\"app\"> so the first Render() cannot erase it")
+	if !strings.Contains(got, `name="webtyp-sprite"`) {
+		t.Errorf("html must contain <meta name=\"webtyp-sprite\">\nGot:\n%s", got)
 	}
 
 	// El cierre </div> debe preceder al <script> del bundle

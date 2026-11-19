@@ -4,6 +4,7 @@ package sitec_test
 
 import (
 	"log"
+	"path"
 	"strings"
 	"sync"
 	"testing"
@@ -50,8 +51,8 @@ func TestReproCorruption(t *testing.T) {
 			am.RegenerateHTMLCache()
 			content := string(am.GetCachedHTML())
 
-			// Critical check: Ensure the catalog icon identifier is present and not mangled
-			if !strings.Contains(content, `id="catalog"`) {
+			// Critical check: Ensure the catalog icon identifier is present in external sprite
+			if !am.ContainsSVG(`id="catalog"`) {
 				log.Printf("[ERROR] Catalog ID missing in iteration %d", i)
 			}
 
@@ -70,12 +71,18 @@ func TestReproCorruption(t *testing.T) {
 	_ = finalContent
 
 	am.RegenerateHTMLCache()
-	finalHTML := string(am.GetCachedHTML())
+	var spriteBody string
+	for _, a := range am.List() {
+		base := path.Base(a.Path)
+		if strings.HasPrefix(base, "sprite.") && strings.HasSuffix(base, ".svg") {
+			spriteBody = string(a.Content)
+		}
+	}
 
-	if !strings.Contains(finalHTML, `id="help"`) {
+	if !strings.Contains(spriteBody, `id="help"`) && !strings.Contains(spriteBody, `id=help`) {
 		t.Error("Final sprite missing 'help' icon")
 	}
-	if !strings.Contains(finalHTML, `id="catalog"`) {
+	if !strings.Contains(spriteBody, `id="catalog"`) && !strings.Contains(spriteBody, `id=catalog`) {
 		t.Error("Final sprite missing 'catalog' icon")
 	}
 

@@ -112,28 +112,6 @@ func (env *TestEnvironment) CreateModulesDir() *TestEnvironment {
 	return env
 }
 
-// withModules inyecta directorios de módulos sin ejecutar go list
-func (env *TestEnvironment) withModules(dirs ...string) *TestEnvironment {
-	return env
-}
-
-// writeModuleSSR crea moduleDir/ssr.go con RenderCSS y/o RenderJS mínimos
-func (env *TestEnvironment) writeModuleSSR(name, css, js string) string {
-	moduleDir := filepath.Join(env.BaseDir, "modules", name)
-	os.MkdirAll(moduleDir, 0755)
-
-	content := "package " + name + "\n\n"
-	if css != "" {
-		content += "func RenderCSS() string { return `" + css + "` }\n"
-	}
-	if js != "" {
-		content += "func RenderJS() string { return `" + js + "` }\n"
-	}
-
-	os.WriteFile(filepath.Join(moduleDir, "ssr.go"), []byte(content), 0644)
-	return moduleDir
-}
-
 // assertContainsCSS / assertNotContainsCSS — usan ContainsCSS() público
 func (env *TestEnvironment) AssertContainsCSS(substr string) {
 	if !env.AssetsHandler.ContainsCSS(substr) {

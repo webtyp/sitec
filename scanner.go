@@ -260,30 +260,3 @@ func (s *scanner) scanDir(dir string, allImports map[string]bool) error {
 	}
 	return nil
 }
-
-func moduleSubpackagesUsed(modulePath string, moduleDir string, importedPaths map[string]bool) []string {
-	var usedSubpackages []string
-	seen := make(map[string]bool)
-
-	for imp := range importedPaths {
-		if imp == modulePath {
-			if !seen[""] {
-				usedSubpackages = append(usedSubpackages, "")
-				seen[""] = true
-			}
-			continue
-		}
-
-		if strings.HasPrefix(imp, modulePath+"/") {
-			subPath := strings.TrimPrefix(imp, modulePath+"/")
-
-			// Support any depth — allow multi-segment paths like "modules/contact"
-			if !seen[subPath] {
-				usedSubpackages = append(usedSubpackages, subPath)
-				seen[subPath] = true
-			}
-		}
-	}
-
-	return usedSubpackages
-}

@@ -60,6 +60,10 @@ func (c *Compiler) GetMainHtmlPath() string {
 
 // RegenerateHTMLCache forces regeneration of the HTML cache.
 func (c *Compiler) RegenerateHTMLCache() error {
+	c.mu.Lock()
+	c.refreshSpriteAssetLocked()
+	c.refreshSecurityAssetsLocked()
+	c.mu.Unlock()
 	return c.indexHtmlHandler.RegenerateCache(c.min)
 }
 

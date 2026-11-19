@@ -3,6 +3,7 @@ package sitec
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"path"
 	"strings"
 
@@ -88,6 +89,47 @@ func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 		})
 	}
 
+	// 1.5 Recompute SRI and csp.json after PWA RegisterScript injection (or any final JS/CSS adjustment)
+	var jsSRI, cssSRI string
+	for _, art := range out {
+		if in.JSURL != "" && art.Path == in.JSURL {
+			jsSRI = sriSHA384(art.Content)
+		}
+		if in.CSSURL != "" && art.Path == in.CSSURL {
+			cssSRI = sriSHA384(art.Content)
+		}
+	}
+	if jsSRI != "" || cssSRI != "" {
+		for i, art := range out {
+			if art.Mediatype == "text/html" {
+				s := string(art.Content)
+				s = updateReleaseIntegrityInHTML(s, "script", "src", in.JSURL, jsSRI)
+				s = updateReleaseIntegrityInHTML(s, "link", "href", in.CSSURL, cssSRI)
+				out[i].Content = []byte(s)
+			}
+		}
+		if jsSRI != "" {
+			manifest := CSPManifest{ScriptHashes: []string{jsSRI}}
+			if payload, err := json.Marshal(manifest); err == nil {
+				updated := false
+				for i, art := range out {
+					if path.Base(art.Path) == CSPManifestFile {
+						out[i].Content = payload
+						updated = true
+						break
+					}
+				}
+				if !updated {
+					out = append(out, Artifact{
+						Path:      path.Join("/", CSPManifestFile),
+						Mediatype: "application/json",
+						Content:   payload,
+					})
+				}
+			}
+		}
+	}
+
 	// 2. Hashed names (always in release)
 	targetURLs := []string{in.CSSURL, in.JSURL}
 	renames := make(map[string]string) // oldURL -> newURL
@@ -130,7 +172,7 @@ func finalizeRelease(arts []Artifact, in releaseInput) ([]Artifact, error) {
 	if hasPWA {
 		var shell []pwa.Asset
 		for _, art := range out {
-			if art.Path == pwa.ServiceWorkerPath {
+			if art.Path == pwa.ServiceWorkerPath || path.Base(art.Path) == CSPManifestFile {
 				continue
 			}
 			// Large artifacts are kept in OPFS by webtyp/artifacts, never precached.

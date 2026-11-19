@@ -156,6 +156,7 @@ func (p *PageProducer) RenderSite() *sitec.Site {
 
 		var cssContent string
 		var htmlContent string
+		var spriteContent string
 		var sitemapContent string
 		var shieldContent string
 
@@ -163,6 +164,9 @@ func (p *PageProducer) RenderSite() *sitec.Site {
 			// Release builds name the stylesheet by its content hash: style.<hash>.css.
 			if base := path.Base(a.Path); strings.HasPrefix(base, "style.") && strings.HasSuffix(base, ".css") {
 				cssContent = string(a.Content)
+			}
+			if base := path.Base(a.Path); strings.HasPrefix(base, "sprite.") && strings.HasSuffix(base, ".svg") {
+				spriteContent = string(a.Content)
 			}
 			if a.Mediatype == "text/html" {
 				htmlContent = string(a.Content)
@@ -186,9 +190,12 @@ func (p *PageProducer) RenderSite() *sitec.Site {
 			t.Errorf("expected CSS to contain @layer, got:\n%s", cssContent)
 		}
 
-		// 3. Emitted HTML contains id="fixture-icon"
-		if !strings.Contains(htmlContent, `id="fixture-icon"`) {
-			t.Errorf("expected HTML to contain id=\"fixture-icon\", got:\n%s", htmlContent)
+		// 3. External sprite contains id="fixture-icon" and HTML points <use> to it
+		if !strings.Contains(spriteContent, `id="fixture-icon"`) {
+			t.Errorf("expected external sprite to contain id=\"fixture-icon\", got:\n%s", spriteContent)
+		}
+		if !strings.Contains(htmlContent, `sprite.`) || !strings.Contains(htmlContent, `#fixture-icon`) {
+			t.Errorf("expected HTML to reference external sprite.<hash>.svg#fixture-icon, got:\n%s", htmlContent)
 		}
 
 		// 4. RenderSite() URL emite sitemap.xml

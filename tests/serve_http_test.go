@@ -191,11 +191,25 @@ func TestSpriteInjectedInHTML(t *testing.T) {
 	r.Invoke("GET", "/", ctx)
 
 	htmlContent := string(ctx.ResponseBody())
-	if !strings.Contains(htmlContent, "test-icon") {
-		t.Error("index.html should contain injected icon ID")
+	if strings.Contains(htmlContent, "<svg") {
+		t.Error("index.html must not inline <svg> sprite")
 	}
-	if !strings.Contains(htmlContent, "<svg") {
-		t.Error("index.html should contain <svg> tag for sprite")
+	if !strings.Contains(htmlContent, `name="webtyp-sprite"`) {
+		t.Fatalf("index.html missing <meta name=\"webtyp-sprite\">: %s", htmlContent)
+	}
+	var spriteURL string
+	for _, a := range am.List() {
+		if strings.HasPrefix(strings.TrimPrefix(a.Path, "/"), "sprite.") && strings.HasSuffix(a.Path, ".svg") {
+			spriteURL = "/" + strings.TrimPrefix(a.Path, "/")
+		}
+	}
+	if spriteURL == "" {
+		t.Fatal("expected external sprite.<hash>.svg artifact")
+	}
+	spriteCtx := &mock.Context{InPath: spriteURL, InMethod: "GET"}
+	r.Invoke("GET", spriteURL, spriteCtx)
+	if !strings.Contains(string(spriteCtx.ResponseBody()), "test-icon") {
+		t.Errorf("external sprite %s missing injected icon ID: %s", spriteURL, string(spriteCtx.ResponseBody()))
 	}
 }
 
