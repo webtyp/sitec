@@ -89,7 +89,7 @@ func invokeSSRExtractorOnce(projectRoot string, startDir string, modules []modul
 	// Run go run main.go and capture JSON output using the toolchain port
 	out, err := toolchain.Run(tmpDir, "run", "main.go")
 	if err != nil {
-		return nil, err
+		return nil, &ModuleBuildError{ModuleDir: projectRoot, Err: err}
 	}
 
 	type rawCollectorOutput struct {

@@ -173,6 +173,17 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 	return a, nil
 }
 
+// ModuleBuildError wraps a Go toolchain failure with the directory of the
+// module where the command ran, so callers (e.g. automatic `go mod tidy`
+// recovery) know which go.mod/go.sum to repair without parsing compiler output.
+type ModuleBuildError struct {
+	ModuleDir string
+	Err       error
+}
+
+func (e *ModuleBuildError) Error() string { return e.Err.Error() }
+func (e *ModuleBuildError) Unwrap() error { return e.Err }
+
 // ExtractAll extracts assets from all discovered modules. An empty result with
 // a nil error means no module declares assets; the caller decides whether that
 // is acceptable.
@@ -180,7 +191,7 @@ func (e *Extractor) ExtractAll() ([]*Assets, error) {
 	scanRoot := e.root()
 	modules, err := e.discoverModules(scanRoot)
 	if err != nil {
-		return nil, err
+		return nil, &ModuleBuildError{ModuleDir: scanRoot, Err: err}
 	}
 
 	rootDir, err := findProjectRoot(scanRoot)

@@ -11,7 +11,7 @@ import (
 	"testing"
 )
 
-// webtypRoot walks up from this file to the tinywasm monorepo dir (the one
+// webtypRoot walks up from this file to the webtyp monorepo dir (the one
 // holding fmt/go.mod → "module webtyp.com/fmt"). Returns "" if not found.
 func webtypRoot() string {
 	_, self, _, _ := runtime.Caller(0)
@@ -38,7 +38,7 @@ func webtypReplaces(t *testing.T) string {
 	t.Helper()
 	root := webtypRoot()
 	if root == "" {
-		t.Skip("tinywasm monorepo sibling layout not found; fixture needs local webtyp.com checkouts")
+		t.Skip("webtyp monorepo sibling layout not found; fixture needs local webtyp.com checkouts")
 	}
 	ents, err := os.ReadDir(root)
 	if err != nil {
