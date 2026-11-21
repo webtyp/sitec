@@ -2,6 +2,7 @@ package sitec
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -124,19 +125,52 @@ func (e *Extractor) results(projectRoot string, startDir string, modules []modul
 }
 
 func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
-	rootDir, err := findProjectRoot(moduleDir)
-	if err != nil {
-		return nil, fmt.Err("find project root:", err)
-	}
-	modules, err := e.discoverModules(rootDir)
-	if err != nil {
-		modules = []module{{path: moduleDir, dir: moduleDir}}
-	}
-
-	target := resolveOwningModule(moduleDir, modules)
-
 	scanRoot := e.root()
-	results, err := e.results(rootDir, scanRoot, modules)
+
+	var (
+		rootDir  string
+		startDir string
+		modules  []module
+		target   module
+		matched  bool
+	)
+
+	// Prefer the app's own module graph (scanRoot) whenever moduleDir is inside
+	// it — including local `replace` modules. Running `go run .ssr_extract` in
+	// the replaced module's directory while computing reachability from scanRoot
+	// mixes two module graphs and fails with missing go.sum entries for packages
+	// that only scanRoot imports.
+	if scanRoot != "" {
+		if scanMods, err := e.discoverModules(scanRoot); err == nil {
+			if m, ok := findOwningModule(moduleDir, scanMods); ok {
+				if pr, err := findProjectRoot(scanRoot); err == nil {
+					rootDir = pr
+				} else {
+					rootDir = scanRoot
+				}
+				startDir = scanRoot
+				modules = scanMods
+				target = m
+				matched = true
+			}
+		}
+	}
+
+	if !matched {
+		var err error
+		rootDir, err = findProjectRoot(moduleDir)
+		if err != nil {
+			return nil, fmt.Err("find project root:", err)
+		}
+		modules, err = e.discoverModules(rootDir)
+		if err != nil {
+			modules = []module{{path: moduleDir, dir: moduleDir}}
+		}
+		target = resolveOwningModule(moduleDir, modules)
+		startDir = rootDir
+	}
+
+	results, err := e.results(rootDir, startDir, modules)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +188,7 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 		})
 	}
 
-	rootModule := resolveOwningModule(scanRoot, modules)
+	rootModule := resolveOwningModule(startDir, modules)
 	a := &Assets{
 		ModuleName:      target.path,
 		RootCSS:         output.Root,
@@ -261,6 +295,34 @@ func isFrameworkModule(path string) bool {
 	return path == cssModulePath || strings.HasSuffix(path, "/"+cssModulePath)
 }
 
+// findOwningModule returns the discovered module that owns dir (exact match or
+// nearest ancestor by path prefix) and true, or (zero, false) if dir is outside
+// the discovered module set.
+func findOwningModule(dir string, modules []module) (module, bool) {
+	cleanDir := filepath.Clean(dir)
+	for _, m := range modules {
+		if m.dir != "" && filepath.Clean(m.dir) == cleanDir {
+			return m, true
+		}
+	}
+	var best module
+	var bestLen int
+	for _, m := range modules {
+		if m.dir == "" {
+			continue
+		}
+		cleanMod := filepath.Clean(m.dir)
+		if strings.HasPrefix(cleanDir, cleanMod+string(os.PathSeparator)) && len(cleanMod) > bestLen {
+			best = m
+			bestLen = len(cleanMod)
+		}
+	}
+	if bestLen > 0 {
+		return best, true
+	}
+	return module{}, false
+}
+
 // resolveOwningModule finds which discovered module a directory belongs to:
 // an exact match first, then the nearest ancestor by path prefix — a site
 // subdirectory with no go.mod of its own (e.g. sites/a/ inside a shared
@@ -269,15 +331,8 @@ func isFrameworkModule(path string) bool {
 // when run from within it. Falls back to a synthetic module{path: dir, dir:
 // dir} so callers never see an empty path.
 func resolveOwningModule(dir string, modules []module) module {
-	for _, m := range modules {
-		if m.dir == dir {
-			return m
-		}
-	}
-	for _, m := range modules {
-		if strings.HasPrefix(dir, m.dir+string(os.PathSeparator)) {
-			return m
-		}
+	if m, ok := findOwningModule(dir, modules); ok {
+		return m
 	}
 	return module{path: dir, dir: dir}
 }
