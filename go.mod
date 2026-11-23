@@ -6,7 +6,7 @@ require (
 	github.com/tdewolff/minify/v2 v2.24.8
 	webtyp.com/artifacts v0.1.1
 	webtyp.com/css v0.4.30
-	webtyp.com/dom v0.13.32
+	webtyp.com/dom v0.13.34
 	webtyp.com/fmt v1.0.3
 	webtyp.com/font v0.0.5
 	webtyp.com/html v0.0.34
@@ -26,6 +26,7 @@ require (
 	github.com/tdewolff/parse/v2 v2.8.5 // indirect
 	golang.org/x/image v0.45.0 // indirect
 	webtyp.com/await v0.1.2 // indirect
+	webtyp.com/calendar v0.1.0 // indirect
 	webtyp.com/color v0.1.2 // indirect
 	webtyp.com/context v0.0.23 // indirect
 	webtyp.com/device v0.1.0 // indirect
@@ -35,4 +36,5 @@ require (
 	webtyp.com/files v0.0.4 // indirect
 	webtyp.com/json v0.5.40 // indirect
 	webtyp.com/model v0.2.26 // indirect
+	webtyp.com/time v0.6.7 // indirect
 )
