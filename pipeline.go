@@ -185,6 +185,7 @@ func (e *Extractor) ExtractModule(moduleDir string) (*Assets, error) {
 		scripts = append(scripts, &js.Script{
 			Name:    s.Name,
 			Content: s.Content,
+			Module:  s.Module,
 		})
 	}
 
