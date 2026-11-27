@@ -7,11 +7,11 @@ require (
 	webtyp.com/artifacts v0.1.1
 	webtyp.com/css v0.4.30
 	webtyp.com/dom v0.13.34
-	webtyp.com/fmt v1.0.3
+	webtyp.com/fmt v1.0.4
 	webtyp.com/font v0.0.5
 	webtyp.com/html v0.0.34
 	webtyp.com/image v0.1.16
-	webtyp.com/js v0.1.6
+	webtyp.com/js v0.1.7
 	webtyp.com/lang v0.1.22
 	webtyp.com/modfind v0.0.11
 	webtyp.com/pwa v0.2.24
@@ -38,5 +38,3 @@ require (
 	webtyp.com/model v0.2.26 // indirect
 	webtyp.com/time v0.6.7 // indirect
 )
-
-replace webtyp.com/js => ../js
