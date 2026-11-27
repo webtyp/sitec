@@ -38,3 +38,5 @@ require (
 	webtyp.com/model v0.2.26 // indirect
 	webtyp.com/time v0.6.7 // indirect
 )
+
+replace webtyp.com/js => ../js

@@ -133,6 +133,8 @@ type Compiler struct {
 	fromRoot            *rootCandidate
 	fromCss             *rootCandidate
 	standaloneJS        map[string]*asset
+	jsIsModule          bool
+	esmCache            *esmPkgCache
 	standaloneOwners    map[string][]string // module name -> list of standalone asset names (outputs)
 	imageProcessor      ImageProcessor
 	ssrExtractor        SSRExtractor

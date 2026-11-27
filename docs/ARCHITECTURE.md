@@ -264,3 +264,9 @@ When serving release artifacts, the serving layer should configure HTTP response
 - [SPECS.md](SPECS.md) — exact detection, merge and error behaviour.
 - [DESIGN.md](DESIGN.md) — why, and what was rejected.
 - [diagrams/EXTRACTION.md](diagrams/EXTRACTION.md) — the pipeline.
+
+## Build-Time ESM Emission & Package Cache (`feat/frontend-js`)
+
+- When any `RenderJS()` provider returns `js.Script{Module: true}`, `Compiler` switches the HTML shell to `<script type="module" integrity="sha384-..." crossorigin="anonymous">` and auto-registers `js.RuntimeScript()` (`/runtime.js`).
+- `Compiler.CompileESMPackage(dir)` compiles strict-subset Go packages through `webtyp/js/esm` with content-hash caching (`esm_cache.go`).
+- Lazy WASM Workers (`web/workers/<name>/main.go`, `js.WebWorker`) continue emitting independently without requiring `browser.wasm`.

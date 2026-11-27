@@ -1,124 +1,91 @@
 ---
-PLAN: "feat: external hashed sprite and lang files, SRI sha384 hashes and csp.json manifest"
-EXECUTOR: jules
+PLAN: "feat: build-time ESM module compilation, per-package cache, and strict CSP module emission"
+EXECUTOR: local
 REVIEWER: none
 ---
 
 > Read AGENTS.md at the repo root before any change.
-> **Finish by yourself:** when the delivery check passes, commit, push and open the pull request. Never ask whether to proceed or finalize — nobody answers, and a session that waits ends without your work.
+> **Finish by yourself:** when the delivery check passes, commit, push and open the pull request. Never ask whether to
+> proceed or finalize — nobody answers, and a session that waits ends without your work.
+> **Rama de trabajo:** `feat/frontend-js` (crear desde `main` antes de editar; nunca tocar `main` hasta cerrar la ola).
+> **Dependencia local:** requiere `webtyp/js` en rama `feat/frontend-js` (`replace webtyp.com/js => ../js` en `go.mod` durante desarrollo local).
 
-# Plan: `sitec` — HTML sin nada en línea, SRI SHA-384, `sprite.<hash>.svg`, `lang.<hash>.json` y `csp.json`
+# Plan — `webtyp/sitec` (Fase 1b / 3a de `FRONTEND_JS_MASTER_PLAN`)
 
-Master: `SECURITY_OBSERVABILITY_MASTER_PLAN.md` (D3, O3b-8).
-**Prerrequisitos:** `svg` (O3b-2), `lang` (O3b-3), `js` (O3b-4).
+Objetivo: extender `sitec` para que descubra y compile en build-time los módulos JS generados desde Go (`js.Script{Module: true}` y paquetes cliente vía `webtyp/js/esm`), con caché por paquete, minificación, hash de contenido + SRI, emisión de `<script type="module">` bajo CSP estricta, manteniendo intacto el compilador de Workers WASM perezosos (`web/workers/<name>/main.go` → `/pdf.wasm`).
 
 ## Tools
 
 ```bash
-export GOPRIVATE=webtyp.com/*,github.com/veltylabs/*
-export GOFLAGS=-mod=mod
 go install webtyp.com/devflow/cmd/gotest@latest
 go install webtyp.com/lang/cmd/langc@latest
 export PATH="$PATH:$(go env GOPATH)/bin"
+export GOPRIVATE="webtyp.com/*,github.com/veltylabs/*"
+export GOFLAGS="-mod=mod"
 ```
 
 ## Ecosystem search
 
-- Buscado en `~/Dev/Project/webtyp` (`sitec`, `pwa`, `svg`, `lang`, `server`).
-- `webtyp.com/pwa` ya provee `pwa.HashedName(name string, content []byte) string` (usado en `sitec/wasm_builder_exec.go:169`).
-- `sitec` es el único compilador de activos (`index.html`, `main.js`, `style.css`, páginas SSR, sprite SVG y diccionario de traducciones).
-- **Decisión:** extender `sitec` para sacar el sprite y el diccionario fuera del HTML a archivos con hash, firmar `<script>` y `<link rel="stylesheet">` con SRI SHA-384, y escribir `csp.json` con los hashes de scripts para que `server/httpd` arme la CSP estricta.
+- Buscado en `~/Dev/Project/webtyp/sitec`: `sitec` ya descubre `RenderJS() []*js.Script` (`scanner.go:98`, `emit_ssr_register.go:15`, `extract.go:234`), minifica con `github.com/tdewolff/minify/v2`, gestiona caché en `cache.go`, y compila `web/workers/<name>/main.go` en `wasm_builder_exec.go`.
+- Decisión: **extender** `sitec` sobre `RenderJS()` y `cache.go` (mismo patrón build-time que `RenderCSS()`; cero `.js` comiteados en librerías/módulos — D7).
 
-## Design gate
+## Design gate (api-design)
 
 1. **Prior art:**
-   - [MDN — Subresource Integrity (SRI)](https://developer.mozilla.org/en-US/docs/Web/Security/Subresource_Integrity): `integrity="sha384-<base64>" crossorigin="anonymous"` en `<script>` y `<link rel="stylesheet">`.
-   - [web.dev — Strict CSP](https://web.dev/articles/strict-csp): el compilador calcula los hashes SHA-384 y los entrega al servidor en un manifiesto de build para la cabecera `Content-Security-Policy`.
-   - [Vite / Next.js asset manifest](https://vitejs.dev/guide/backend-integration.html): el build emite un JSON pequeño (`csp.json`) en el directorio público junto a los activos con hash.
-2. **Novice-name test:**
-   - `sitec.CSPManifestFile = "csp.json"` — archivo JSON en `OutputDir` con `{"script_hashes":["sha384-..."]}`.
-   - `sitec.Translations.BundleTranslations(rootDir string) ([]byte, error)` — alineado con `langc.Translations` (O3b-3).
+   - [`Vite`](https://vite.dev/guide/features.html#npm-dependency-resolving-and-pre-bundling): emisión de `<script type="module">` con hash de contenido y precarga de módulos.
+   - [`esbuild`](https://esbuild.github.io/api/#format): empaquetado ESM con *tree-shaking* y minificación en milisegundos.
+   - [`sitec` CSS pipeline](https://github.com/webtyp/sitec): descubrimiento AST + caché + emisión con hash + SRI en HTML.
+   - **Por qué diferimos:** `sitec` ya es el compilador único de activos de `webtyp` en Go puro; añadir emisión ESM aquí evita introducir Node/npm en el toolchain de desarrollo o CI.
+2. **Novice-name test:** reutiliza `RenderJS() []*js.Script` (ya existente) con `Script.Module == true`; en `sitec.Config`, `JSModules bool` (o activación automática cuando hay `Script.Module == true` sin requerir flag extra — preferido: automático, cero flags nuevos).
 3. **Complexity ledger:**
-   - Conceptos a aprender: `+1` (`csp.json`, leído automáticamente por `server/httpd`, nunca a mano por la app) / `-0`
-   - Archivos que toca una app: `0`
-   - Líneas en el call site de la app: `0`
-   - Formas de hacer lo mismo: `0` (se elimina la inyección en línea de sprite y `<script id="webtyp-lang">` en `index.html` y páginas SSR).
-4. **Where it belongs:** `sitec` produce los bytes finales (minificados) de `main.js`, `style.css`, `sprite.<hash>.svg` y `lang.<hash>.json`; solo él puede calcular sus hashes exactos al compilar y escribir `index.html` + `csp.json`.
-5. **What does this change delete?**
-   - Borra `c.indexHtmlHandler.AddDynamicContent(renderSprite)` (`emit_core.go:700-702`).
-   - Borra `c.indexHtmlHandler.AddDynamicContent(translationsHTML)` (`emit_core.go:707-711`).
-   - Borra `c.renderSpriteNoLock() + p.Body` en páginas estáticas (`emit_route.go:111`).
-   - Borra el campo `translationsHTML string` de `Compiler` (`emit_core.go:151`).
+   - Conceptos nuevos: `+0` (reutiliza `RenderJS()` y `web/workers/`).
+   - Flags nuevos en `sitec.Config`: `+0` (detección automática por `Script.Module`).
+   - Formas de hacer lo mismo: `+0` (un solo pipeline de JS en `sitec`).
+4. **Where it belongs:** `webtyp/sitec` es el único compilador de activos de salida (`web/public/`). Importa `webtyp/js` y `webtyp/js/esm`; ningún módulo de dominio importa `sitec`.
+5. **What it deletes:** en Fase 4 eliminará la inyección obligatoria de `PageBootstrap("/browser.wasm")` cuando el proyecto no tenga `web/browser/main.go` WASM.
 
 ## APIs used
 
 | Symbol | Exact signature | Tag | File |
 |---|---|---|---|
-| `pwa.HashedName` | `func HashedName(name string, content []byte) string` | `v0.2.13` | `webtyp.com/pwa` |
-| `svg.SetSpriteURL` | `func SetSpriteURL(url string)` | *(O3b-2)* | `webtyp.com/svg` |
-| `svg.SpriteMetaName` | `const SpriteMetaName = "webtyp-sprite"` | *(O3b-2)* | `webtyp.com/svg` |
-| `lang.MetaName` | `const MetaName = "webtyp-lang"` | *(O3b-3)* | `webtyp.com/lang` |
+| `js.Script` | `type Script struct { Name string; Content string; Module bool }` | `feat/frontend-js` | `webtyp.com/js/js.go` |
+| `js.RuntimeScript` | `func RuntimeScript() *Script` | `feat/frontend-js` | `webtyp.com/js/runtime_emit.go` |
+| `esm.CompilePackage` | `func CompilePackage(dir string) (*js.Script, error)` | `feat/frontend-js` | `webtyp.com/js/esm/compile.go` |
 
-If a signature in the published tag differs from this table, stop and name the symbol in the PR; never adapt it by guessing.
+If a signature differs after `webtyp/js` Stage 3 lands, update this table first; never guess.
 
-## Reglas de entrega y anti-footguns
+## Etapas
 
-- `sitec` es tooling de servidor (`!wasm`): stdlib `crypto/sha512`, `encoding/base64`, `encoding/json` son legítimas aquí.
-- **Todos los sitios que construyen `<head>`/`index-open.html`/`index-close.html` deben actualizarse juntos:**
-  1. `emit_html.go` (`NewHtmlHandler`, `generateStylesheetLink`, `generateJavaScriptTag`)
-  2. `emit_favicon.go:125-156` (`updateHtmlFaviconLinks`)
-  3. `emit_route.go:97-118` (`emitPages`)
-- Hacer commit después de cada etapa. No usar `git reset`, `git restore`, `git checkout -- <file>` ni `git stash`.
+### Etapa 1 — Diagrama y pruebas en rojo (TDD)
+- Crear `docs/diagrams/ESM_EMISSION.md` (`flowchart TD`: `RenderJS()` + runtime `js.RuntimeScript()` → caché por paquete → minificación → `/app.<hash>.js` + `<script type="module" src="..." integrity="sha384-...">` + Workers `/pdf.worker.js` + `/pdf.wasm`).
+- Crear `tests/esm_emission_test.go` y registrar en `docs/TESTS.md`:
+  - `TestSitec_EmitsModuleScriptTag`: cuando un productor devuelve `js.Script{Module: true}`, el HTML emite `<script type="module" src="/app.js">` (dev) y `<script type="module" src="/app.<hash>.js" integrity="sha384-...">` (release), sin inline JS (CSP estricta).
+  - `TestSitec_CachesCompiledPackage`: segunda pasada sin cambios de hash de fuente reutiliza la entrada de `cache.go`.
+  - `TestSitec_KeepsLazyWasmWorkers`: `web/workers/pdf/main.go` sigue compilando a `/pdf.wasm` y `/pdf.worker.js` aunque la app no tenga `browser.wasm`.
 
----
+### Etapa 2 — Emisión de módulos ESM y SRI en HTML
+- Editar `emit_html.go` y `emit_injection.go`: soportar emisión de `<script type="module">` con `integrity` (SRI) cuando `Script.Module == true`, separado de scripts clásicos.
+- Editar `emit_asset.go` y `emit_flush.go`: inyectar `js.RuntimeScript()` una sola vez como base del bundle ESM y emitir cada `Script{Module: true}` minificado.
 
-## Etapa 1: Diagrama y pruebas (TDD)
+### Etapa 3 — Caché por paquete para `esm.CompilePackage`
+- Editar `cache.go`: añadir clave tipada `esmCacheKey{PkgPath, SourceHash}` para cachear la salida de `esm.CompilePackage` en memoria/disco durante `webtyp dev` (hot-reload en milisegundos).
 
-1. Crear `docs/diagrams/STRICT_CSP_ASSETS.md` (contexto, `flowchart TD`, walkthrough numerado):
-   - `mainStyleCssHandler` y `mainJsHandler` minifican → `sriHash(bytes)` calcula `"sha384-" + base64(sha384(bytes))`.
-   - `sprite` se emite como `sprite.<hash>.svg` (sin atributo `style`), `svg.SetSpriteURL(url)` se aplica antes de SSR, y `<meta name="webtyp-sprite" content="...">` entra en `<head>`.
-   - `translations` se emite como `lang.<hash>.json` (cuando hay diccionario) y `<meta name="webtyp-lang" content="...">` entra en `<head>`.
-   - `index.html` recibe `<link rel="stylesheet" href="..." integrity="sha384-..." crossorigin="anonymous">` y `<script src="..." integrity="sha384-..." crossorigin="anonymous"></script>`.
-   - `csp.json` escribe `{"script_hashes":["sha384-..."]}` en `OutputDir`.
-2. Agregar pruebas en `tests/strict_csp_assets_test.go` (y actualizar `tests/translations_test.go`, `tests/emit_svg_test.go` y `docs/TESTS.md` bajo `| Test | Rule |`):
-   - `TestEmitHTML_NoInlineScriptStyleOrSVG`: el `index.html` emitido no contiene `<svg`, `<style`, `style=` ni `<script` con cuerpo interno.
-   - `TestEmitHTML_SRIIntegrityMatchesAssets`: los atributos `integrity="sha384-..."` de `<link rel="stylesheet">` y `<script>` coinciden exactamente con el SHA-384 de los bytes finales servidos de `style.css` y `main.js`, y ambos llevan `crossorigin="anonymous"`.
-   - `TestEmitSprite_ExternalHashedFile`: el sprite se emite como archivo `sprite.<hash>.svg` en `OutputDir` y `<head>` contiene `<meta name="webtyp-sprite" content="...">`.
-   - `TestEmitTranslations_ExternalHashedJSON`: el diccionario se emite como `lang.<hash>.json` y `<head>` contiene `<meta name="webtyp-lang" content="...">` (ningún `<script id="webtyp-lang">` en HTML).
-   - `TestEmitCSPManifest_ContainsScriptHashes`: `csp.json` contiene exactamente el `sha384-...` de `main.js`.
+### Etapa 4 — Modo sin `browser.wasm` + Workers perezosos intactos
+- Editar `wasm_builder_exec.go`: no fallar ni inyectar `PageBootstrap` cuando el proyecto compila su frontend a ESM y no tiene `browser.wasm`, manteniendo intacta la compilación de `web/workers/<name>/main.go`.
 
-## Etapa 2: Sprite y diccionario externos (`emit_svg.go`, `emit_core.go`, `emit_route.go`)
+### Etapa 5 — Documentación
+- Actualizar `README.md` (≤150 líneas) y `docs/ARCHITECTURE.md`.
 
-1. En `emit_core.go`:
-   - Actualizar interfaz `Translations`: `BundleTranslations(rootDir string) ([]byte, error)`.
-   - Reemplazar `translationsHTML string` por `translationsJSON []byte`, `translationsURL string`, `spriteURL string`.
-   - Eliminar los dos `c.indexHtmlHandler.AddDynamicContent(...)` de sprite y traducciones (`:700-711`).
-   - Emitir el sprite como un `*asset` propio (`sprite.<hash>.svg`, `image/svg+xml`) vía `pwa.HashedName("sprite.svg", spriteBytes)` y guardar `c.spriteURL`; llamar `svg.SetSpriteURL(c.spriteURL)` antes de `emitPages`.
-   - En `refreshTranslations`: cuando `len(payload) > 0`, emitir `lang.<hash>.json` (`application/json`) vía `pwa.HashedName("lang.json", payload)` y guardar `c.translationsURL`.
-2. En `emit_route.go:111`:
-   - Reemplazar `bodyContent := c.renderSpriteNoLock() + p.Body` por `bodyContent := p.Body` (las páginas ya usan `<use href="/sprite.<hash>.svg#..."/>` gracias a `svg.SetSpriteURL`).
+## Delivery check
 
-## Etapa 3: SRI SHA-384 y manifiesto `csp.json` (`emit_sri.go`, `emit_html.go`, `emit_favicon.go`)
+- `gotest` en verde (con `replace webtyp.com/js => ../js` durante desarrollo en rama `feat/frontend-js`).
+- `grep -rn "TODO\|FIXME\|Deprecated" --include='*.go' .` sin hallazgos nuevos.
+- Commit tras cada etapa en rama `feat/frontend-js`.
 
-1. Crear `emit_sri.go`:
-   - `const CSPManifestFile = "csp.json"`
-   - `type CSPManifest struct { ScriptHashes []string \`json:"script_hashes"\` }`
-   - `func sriSHA384(data []byte) string`: usa `crypto/sha512.Sum384(data)` + `base64.StdEncoding.EncodeToString` con prefijo `"sha384-"`.
-   - Método `(c *Compiler) refreshHTMLSecurityTags()` que calcula los hashes de los bytes actuales de `mainStyleCssHandler` y `mainJsHandler`, reconstruye `index-open.html` (con favicon links, `<meta name="webtyp-sprite">`, `<meta name="webtyp-lang">` si aplica, y `<link rel="stylesheet" href="..." integrity="..." crossorigin="anonymous" />`) e `index-close.html` (con `<script src="..." integrity="..." crossorigin="anonymous"></script>`), y actualiza el `*asset` de `csp.json`.
-2. Unificar `emit_html.go` y `emit_favicon.go:125-156` para que ambos usen el mismo constructor de `<head>` y cierre de `<body>` (evitando duplicación entre dos copias de `index-open.html`).
-3. Invocar `refreshHTMLSecurityTags()` cada vez que cambia `style.css`, `main.js`, sprite, traducciones o favicons.
-
-## Etapa 4: Traducciones, verificación y documentación
-
-1. Si se agregó o cambió algún texto de `lang.Translate`/`fmt.Err`, ejecutar `langc sync .` y verificar cero claves sin traducir y cero advertencias de reutilización.
-2. Actualizar `README.md` (≤ 150 líneas, 4 secciones obligatorias), `docs/ARCHITECTURE.md` (4 secciones) y `docs/TESTS.md`.
-3. Ejecutar `gotest`.
-
-## Tabla de etapas
-
-| Etapa | Archivos | Qué |
+| Etapa | Qué | Estado |
 |---|---|---|
-| 1 | `docs/diagrams/STRICT_CSP_ASSETS.md`, `tests/strict_csp_assets_test.go`, `tests/translations_test.go`, `tests/emit_svg_test.go`, `docs/TESTS.md` | Diagrama y pruebas TDD |
-| 2 | `emit_core.go`, `emit_svg.go`, `emit_route.go` | Sprite `sprite.<hash>.svg` y traducciones `lang.<hash>.json` fuera del HTML |
-| 3 | `emit_sri.go`, `emit_html.go`, `emit_favicon.go` | SRI SHA-384, `<meta>` tags, unificación de `index-open.html` y `csp.json` |
-| 4 | `lang.json`, `README.md`, `docs/ARCHITECTURE.md`, `docs/TESTS.md` | Traducciones, documentación y `gotest` verde |
+| 1 | Diagrama `ESM_EMISSION.md` + pruebas TDD en rojo | ⬜ |
+| 2 | Emisión `<script type="module">` + SRI + `RuntimeScript()` | ⬜ |
+| 3 | Caché por paquete en `cache.go` | ⬜ |
+| 4 | Frontend sin `browser.wasm` manteniendo `web/workers/` | ⬜ |
+| 5 | `README.md` + `docs/ARCHITECTURE.md` | ⬜ |

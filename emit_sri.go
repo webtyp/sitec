@@ -37,6 +37,7 @@ type htmlShellOptions struct {
 	cssIntegrity string
 	jsURL        string
 	jsIntegrity  string
+	jsIsModule   bool
 }
 
 func buildHTMLShell(o htmlShellOptions) (openHTML, closeHTML []byte) {
@@ -83,7 +84,11 @@ func buildHTMLShell(o htmlShellOptions) (openHTML, closeHTML []byte) {
 		closeBuf.WriteString(o.jsIntegrity)
 		closeBuf.WriteString("\" crossorigin=\"anonymous\"")
 	}
-	closeBuf.WriteString(" type=\"text/javascript\"></script>\n</body>\n</html>")
+	if o.jsIsModule {
+		closeBuf.WriteString(" type=\"module\"></script>\n</body>\n</html>")
+	} else {
+		closeBuf.WriteString(" type=\"text/javascript\"></script>\n</body>\n</html>")
+	}
 
 	return []byte(head.String()), []byte(closeBuf.String())
 }
@@ -211,6 +216,7 @@ func (c *Compiler) updateHTMLShellWithSRIs(cssSRI, jsSRI string) {
 		cssIntegrity: cssSRI,
 		jsURL:        jsURL,
 		jsIntegrity:  jsSRI,
+		jsIsModule:   c.jsIsModule,
 	})
 
 	c.indexHtmlHandler.mu.Lock()
