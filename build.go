@@ -418,10 +418,11 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 			return nil, err
 		}
 		if wasmOut.IsModule {
-			if err := c.UpdateSSRModule("bootstrap", "", []*js.Script{{Name: "", Content: wasmOut.Runtime, Module: true}}, "", nil); err != nil {
-				return nil, err
-			}
-			if err := c.Write(wasmOut.Filename, wasmOut.Binary, "text/javascript"); err != nil {
+			// Prepend webtyp-lang preload before the already-minified goesm ES module so
+			// everything ships in one SRI-verified <script type="module"> under strict CSP.
+			preload := "const __wtLangMeta=document.querySelector('meta[name=\"webtyp-lang\"]');if(__wtLangMeta&&__wtLangMeta.content){try{const __r=await fetch(__wtLangMeta.content);if(__r.ok)self.__webtypLang=await __r.json();}catch{}}\n"
+			combined := preload + string(wasmOut.Binary)
+			if err := c.UpdateSSRModule("bootstrap", "", []*js.Script{{Name: "", Content: combined, Module: true}}, "", nil); err != nil {
 				return nil, err
 			}
 		} else {
