@@ -23,5 +23,6 @@ type WasmBuilder interface {
 type WasmOutput struct {
 	Binary   []byte // el .wasm
 	Filename string // su nombre, que el shell HTML referencia
-	Runtime  string // el glue JS correspondiente al modo usado
+	Runtime  string
+	IsModule bool // el glue JS correspondiente al modo usado
 }

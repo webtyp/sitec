@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"webtyp.com/fmt"
 	"webtyp.com/js"
@@ -120,6 +121,9 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	// tenga archivos hermanos (ej: main.go y access.go).
 	var cmd *exec.Cmd
 	isBrowser := filepath.Clean(entry) == filepath.FromSlash(defaultBrowserEntry)
+	if isBrowser && os.Getenv("WEBTYP_FRONTEND") == "js" {
+		return w.buildGoESM(pkgDir)
+	}
 	if !w.stdlib {
 		args := []string{"build"}
 
@@ -182,4 +186,80 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 		Filename: wasmFilename,
 		Runtime:  runtimeJS,
 	}, nil
+}
+
+func (w *defaultWasmBuilder) buildGoESM(pkgDir string) (WasmOutput, error) {
+	tmpDir, err := os.MkdirTemp("", "sitec-goesm-*")
+	if err != nil {
+		return WasmOutput{}, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cmd := execCommand("goesm", "build", "-minify", "-o", tmpDir, ".")
+	cmd.Dir = pkgDir
+	env := os.Environ()
+	if go127 := findSitecGo127Toolchain(); go127 != "" {
+		env = sitecEnvOverride(env, "GOROOT", go127)
+		env = sitecEnvOverride(env, "PATH", filepath.Join(go127, "bin")+string(os.PathListSeparator)+os.Getenv("PATH"))
+	}
+	cmd.Env = env
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return WasmOutput{}, fmt.Err("goesm compilation failed: ", string(out), err)
+	}
+
+	entries, err := os.ReadDir(tmpDir)
+	if err != nil {
+		return WasmOutput{}, err
+	}
+	var binary []byte
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".js") {
+			binary, err = os.ReadFile(filepath.Join(tmpDir, e.Name()))
+			if err != nil {
+				return WasmOutput{}, err
+			}
+			break
+		}
+	}
+	if len(binary) == 0 {
+		return WasmOutput{}, fmt.Err("goesm produced no .js output")
+	}
+	filename := "browser.js"
+	if w.hashName {
+		filename = pwa.HashedName(filename, binary)
+	}
+	return WasmOutput{
+		Binary:   binary,
+		Filename: filename,
+		Runtime:  js.PageBootstrapESM("/" + filename).Content,
+		IsModule: true,
+	}, nil
+}
+
+func findSitecGo127Toolchain() string {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			gopath = filepath.Join(home, "go")
+		}
+	}
+	if gopath == "" {
+		return ""
+	}
+	matches, _ := filepath.Glob(filepath.Join(gopath, "pkg", "mod", "golang.org", "toolchain*1.27*"))
+	if len(matches) == 0 {
+		return ""
+	}
+	return matches[len(matches)-1]
+}
+
+func sitecEnvOverride(env []string, key, val string) []string {
+	prefix := key + "="
+	out := make([]string, 0, len(env)+1)
+	for _, e := range env {
+		if !strings.HasPrefix(e, prefix) {
+			out = append(out, e)
+		}
+	}
+	return append(out, prefix+val)
 }

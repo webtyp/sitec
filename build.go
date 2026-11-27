@@ -8,6 +8,7 @@ import (
 
 	"webtyp.com/artifacts"
 	"webtyp.com/fmt"
+	"webtyp.com/js"
 	"webtyp.com/image/min"
 	"webtyp.com/router/routescan"
 )
@@ -416,9 +417,18 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		if err != nil {
 			return nil, err
 		}
-		c.SetWasm(wasmOut.Filename, wasmOut.Runtime)
-		if err := c.Write(wasmOut.Filename, wasmOut.Binary, "application/wasm"); err != nil {
-			return nil, err
+		if wasmOut.IsModule {
+			if err := c.UpdateSSRModule("bootstrap", "", []*js.Script{{Name: "", Content: wasmOut.Runtime, Module: true}}, "", nil); err != nil {
+				return nil, err
+			}
+			if err := c.Write(wasmOut.Filename, wasmOut.Binary, "text/javascript"); err != nil {
+				return nil, err
+			}
+		} else {
+			c.SetWasm(wasmOut.Filename, wasmOut.Runtime)
+			if err := c.Write(wasmOut.Filename, wasmOut.Binary, "application/wasm"); err != nil {
+				return nil, err
+			}
 		}
 	}
 
