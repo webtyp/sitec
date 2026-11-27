@@ -224,14 +224,8 @@ func (w *defaultWasmBuilder) buildGoESM(pkgDir string) (WasmOutput, error) {
 	if len(binary) == 0 {
 		return WasmOutput{}, fmt.Err("goesm produced no .js output")
 	}
-	filename := "browser.js"
-	if w.hashName {
-		filename = pwa.HashedName(filename, binary)
-	}
 	return WasmOutput{
 		Binary:   binary,
-		Filename: filename,
-		Runtime:  js.PageBootstrapESM("/" + filename).Content,
 		IsModule: true,
 	}, nil
 }

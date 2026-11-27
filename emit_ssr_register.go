@@ -102,9 +102,13 @@ func (c *Compiler) updateSSRModuleInSlot(name string, css string, scripts []*js.
 	var currentStandalone []string
 
 	hasModule := false
+	needsRuntime := false
 	for _, s := range scripts {
 		if s.Module {
 			hasModule = true
+			if strings.Contains(s.Content, "./runtime.js") {
+				needsRuntime = true
+			}
 		}
 		if s.Name == "" {
 			bundledJS += s.Content
@@ -126,14 +130,16 @@ func (c *Compiler) updateSSRModuleInSlot(name string, css string, scripts []*js.
 
 	if hasModule && !c.jsIsModule {
 		c.jsIsModule = true
+		c.refreshSecurityAssetsLocked()
+	}
+	if needsRuntime {
 		rt := js.RuntimeScript()
 		if _, exists := c.standaloneJS[rt.Name]; !exists {
 			c.standaloneJS[rt.Name] = newAssetFile(rt.Name, "text/javascript", c.Config, nil)
 			c.standaloneJS[rt.Name].urlPath = "/" + rt.Name
 			c.allAssets[c.standaloneJS[rt.Name].outputPath] = c.standaloneJS[rt.Name]
+			c.standaloneJS[rt.Name].UpdateContentInSlot("webtyp:runtime", "write", &ContentFile{Path: "webtyp:runtime", Content: []byte(rt.Content)}, "open")
 		}
-		c.standaloneJS[rt.Name].UpdateContentInSlot("webtyp:runtime", "write", &ContentFile{Path: "webtyp:runtime", Content: []byte(rt.Content)}, "open")
-		c.refreshSecurityAssetsLocked()
 	}
 
 		if bundledJS != "" {
