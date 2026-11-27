@@ -121,7 +121,7 @@ func (w *defaultWasmBuilder) Build(dir string) (WasmOutput, error) {
 	// tenga archivos hermanos (ej: main.go y access.go).
 	var cmd *exec.Cmd
 	isBrowser := filepath.Clean(entry) == filepath.FromSlash(defaultBrowserEntry)
-	if isBrowser && os.Getenv("WEBTYP_FRONTEND") == "js" {
+	if isBrowser && os.Getenv("WEBTYP_FRONTEND") != "wasm" {
 		return w.buildGoESM(pkgDir)
 	}
 	if !w.stdlib {

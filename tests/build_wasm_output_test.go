@@ -24,6 +24,7 @@ func TestRunWasmBuild_FailsIfInputMissing(t *testing.T) {
 }
 
 func TestWasmbuild_WritesScriptJSFromJSPackage_Stdlib(t *testing.T) {
+	t.Setenv("WEBTYP_FRONTEND", "wasm")
 	tmpDir := t.TempDir()
 
 	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
@@ -67,6 +68,7 @@ func TestWasmbuild_WritesScriptJSFromJSPackage_Stdlib(t *testing.T) {
 }
 
 func TestWasmbuild_WritesScriptJSFromJSPackage_TinyGo(t *testing.T) {
+	t.Setenv("WEBTYP_FRONTEND", "wasm")
 	tmpDir := t.TempDir()
 
 	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
@@ -260,6 +262,7 @@ func TestWasmbuild_NewWasmBuilderTinyGoKeepsFixedName(t *testing.T) {
 }
 
 func TestWasmBuild_CoexistingBrowserAndEdgeInWebDir(t *testing.T) {
+	t.Setenv("WEBTYP_FRONTEND", "wasm")
 	tmpDir := t.TempDir()
 
 	if err := os.WriteFile(filepath.Join(tmpDir, "go.mod"), []byte("module testapp\n\ngo 1.22\n"), 0644); err != nil {
