@@ -38,6 +38,7 @@ type fontsWire struct {
 type ScriptOutput struct {
 	Name    string `json:"name"`
 	Content string `json:"content"`
+	Module  bool   `json:"module,omitempty"`
 }
 
 const (
@@ -177,6 +178,7 @@ import (
 type script struct {
 	Name    string ` + "`json:\"name\"`" + `
 	Content string ` + "`json:\"content\"`" + `
+	Module  bool   ` + "`json:\"module,omitempty\"`" + `
 }
 
 type fontsWire struct {
@@ -232,7 +234,7 @@ func main() {
 			{{if .HasHTML}}s.HTML += inst.RenderHTML(){{end}}
 			{{if .HasJS}}
 			for _, scr := range inst.RenderJS() {
-				s.Scripts = append(s.Scripts, script{Name: scr.Name, Content: scr.Content})
+				s.Scripts = append(s.Scripts, script{Name: scr.Name, Content: scr.Content, Module: scr.Module})
 			}
 			{{end}}
 			{{if .HasIcons}}s.Icons = append(s.Icons, inst.IconSvg()){{end}}
@@ -262,7 +264,7 @@ func main() {
 			{{if .HasHTML}}s.HTML += {{$alias}}.RenderHTML(){{end}}
 			{{if .HasJS}}
 			for _, scr := range {{$alias}}.RenderJS() {
-				s.Scripts = append(s.Scripts, script{Name: scr.Name, Content: scr.Content})
+				s.Scripts = append(s.Scripts, script{Name: scr.Name, Content: scr.Content, Module: scr.Module})
 			}
 			{{end}}
 			{{if .HasIcons}}s.Icons = append(s.Icons, {{$alias}}.IconSvg()){{end}}
