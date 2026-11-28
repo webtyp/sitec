@@ -365,10 +365,6 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 		e.SetAssetLibraries(cfg.AssetLibraries)
 	}
 
-	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(defaultBrowserEntry))); err == nil {
-		e.SetWasmBuilder(NewDefaultWasmBuilder(cfg.Mode == ModeDev))
-	}
-
 	all, err := e.ExtractAll()
 	if err != nil {
 		return nil, err
@@ -411,25 +407,17 @@ func buildPipeline(cfg BuildConfig, minify bool) (*Output, error) {
 	imgHandler.SetFinder(e.discoverer())
 	c.SetImageProcessor(imgHandler)
 
-	wb := e.WasmBuilder()
-	if wb != nil {
-		wasmOut, err := wb.Build(root)
+	browserDir := filepath.Join(root, filepath.Dir(filepath.FromSlash(defaultBrowserEntry)))
+	if _, err := os.Stat(filepath.Join(root, filepath.FromSlash(defaultBrowserEntry))); err == nil {
+		module, err := buildBrowserModule(browserDir)
 		if err != nil {
 			return nil, err
 		}
-		if wasmOut.IsModule {
-			// Prepend webtyp-lang preload before the already-minified goesm ES module so
-			// everything ships in one SRI-verified <script type="module"> under strict CSP.
-			preload := "const __wtLangMeta=document.querySelector('meta[name=\"webtyp-lang\"]');if(__wtLangMeta&&__wtLangMeta.content){try{const __r=await fetch(__wtLangMeta.content);if(__r.ok)self.__webtypLang=await __r.json();}catch{}}\n"
-			combined := preload + string(wasmOut.Binary)
-			if err := c.UpdateSSRModule("bootstrap", "", []*js.Script{{Name: "", Content: combined, Module: true}}, "", nil); err != nil {
-				return nil, err
-			}
-		} else {
-			c.SetWasm(wasmOut.Filename, wasmOut.Runtime)
-			if err := c.Write(wasmOut.Filename, wasmOut.Binary, "application/wasm"); err != nil {
-				return nil, err
-			}
+		// Prepend webtyp-lang preload before the already-minified goesm ES module so
+		// everything ships in one SRI-verified <script type="module"> under strict CSP.
+		preload := "const __wtLangMeta=document.querySelector('meta[name=\"webtyp-lang\"]');if(__wtLangMeta&&__wtLangMeta.content){try{const __r=await fetch(__wtLangMeta.content);if(__r.ok)self.__webtypLang=await __r.json();}catch{}}\n"
+		if err := c.UpdateSSRModule("bootstrap", "", []*js.Script{{Name: "", Content: preload + string(module), Module: true}}, "", nil); err != nil {
+			return nil, err
 		}
 	}
 

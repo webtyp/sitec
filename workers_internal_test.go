@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"webtyp.com/js"
 )
 
 // The SIMD build hands TinyGo a target file that enables simd128, and compiles for speed.
@@ -30,16 +31,16 @@ func TestWorkers_SIMDBinaryUsesSIMDTarget(t *testing.T) {
 	}
 
 	root := t.TempDir()
-	entry := filepath.Join(root, "web", "workers", "echo", "main.go")
+	entry := filepath.Join(root, WorkersDir, "echo", "main.go")
 	if err := os.MkdirAll(filepath.Dir(entry), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(entry, []byte("package main\nfunc main() {}\n"), 0644); err != nil {
+	if err := os.WriteFile(entry, []byte("//go:build wasm && tinygo\n\npackage main\nfunc main() {}\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	_, _ = NewWasmBuilder(false, WasmBuildOptions{
-		Entry: "web/workers/echo/main.go", OutputName: "echo.simd", SIMD: true, Speed: true,
+	_, _ = NewWasmBuilder(WasmBuildOptions{
+		Package: "./" + WorkersDir + "/echo", OutputName: "echo.simd", Runtime: js.RuntimeTinyGo, SIMD: true, Speed: true,
 	}).Build(root) // the stub writes no binary: only the arguments matter here
 
 	if !strings.Contains(target, "+simd128") {
@@ -76,12 +77,16 @@ func TestWorkers_DevBuildsTinyGoSIMDOnce(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(entry), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(entry, []byte("package main\nfunc main() {}\n"), 0644); err != nil {
+	if err := os.WriteFile(entry, []byte("//go:build wasm && tinygo\n\npackage main\nfunc main() {}\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	c := NewCompiler(&Config{RootDir: root, DevMode: true})
 	c.SetFS(NewMemFS())
-	_ = c.BuildWorkers() // the stub writes no binary: only the commands matter
+	workers, err := projectWorkers(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = buildWorkers(root, c, true, workers) // the stub writes no binary: only the commands matter
 
 	if len(tools) != 1 || tools[0] != "tinygo" {
 		t.Fatalf("commands = %v, want one tinygo build", tools)

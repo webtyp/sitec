@@ -58,8 +58,17 @@ func TestCompiler_BuildWorkers(t *testing.T) {
 		if !ok || !strings.Contains(string(js), "/echo.wasm") {
 			t.Errorf("%s missing or not pointing at /echo.wasm", name)
 		}
+		// Every Worker is a TinyGo binary: its script must carry TinyGo's wasm_exec, or the
+		// binary fails to instantiate on a missing runtime import.
+		if !strings.Contains(string(js), tinyGoGlueSignature) {
+			t.Errorf("%s does not carry the TinyGo wasm_exec glue", name)
+		}
 	}
-	if names, err := sitec.WorkerNames(root); err != nil || len(names) != 1 || names[0] != "echo" {
-		t.Errorf("WorkerNames = %v, %v", names, err)
+	workers, err := sitec.FindWebWorkers(root, sitec.NewExecToolchain())
+	if err != nil || len(workers) != 1 || workers[0].Name != "echo" {
+		t.Errorf("FindWebWorkers = %v, %v", workers, err)
 	}
 }
+
+// tinyGoGlueSignature appears only in TinyGo's wasm_exec.js (Go's has runtime.wasmExit instead).
+const tinyGoGlueSignature = "runtime.sleepTicks"

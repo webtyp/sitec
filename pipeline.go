@@ -29,7 +29,6 @@ type Extractor struct {
 	AssetLibraries []string
 	lister         GraphLister
 	toolchain      Toolchain
-	wasmBuilder    WasmBuilder
 	// verbose gates low-value-by-default diagnostics (e.g. the "N packages
 	// skipped" reachability summary) that are correct but noisy on every
 	// cold-cache scan. Off by default; the caller (webtyp/app) wires it to
@@ -74,7 +73,6 @@ func (e *Extractor) SetVerbose(v bool)              { e.verbose = v }
 func (e *Extractor) SetFinder(f modfind.Discoverer) { e.finder = f }
 func (e *Extractor) SetGraphLister(l GraphLister)   { e.lister = l }
 func (e *Extractor) SetToolchain(t Toolchain)       { e.toolchain = t }
-func (e *Extractor) SetWasmBuilder(wb WasmBuilder)  { e.wasmBuilder = wb }
 
 func (e *Extractor) discoverer() modfind.Discoverer {
 	e.mu.Lock()
@@ -85,11 +83,6 @@ func (e *Extractor) discoverer() modfind.Discoverer {
 	return e.finder
 }
 
-func (e *Extractor) WasmBuilder() WasmBuilder {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return e.wasmBuilder
-}
 
 func (e *Extractor) SetAssetLibraries(libs []string) {
 	e.mu.Lock()

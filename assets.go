@@ -40,6 +40,12 @@ type FS interface {
 	List() []Artifact
 }
 
+// fileRemover is the capability of an FS that can delete what it wrote (memFS, osFS). A path that
+// is not there is not an error.
+type fileRemover interface {
+	Remove(path string) error
+}
+
 // Artifact se autodescribe: la ruta ES la URL. No hay una segunda tabla de
 // rutas que mantener en sincronía.
 type Artifact struct {

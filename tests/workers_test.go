@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"webtyp.com/js"
 	"webtyp.com/pwa"
 	"webtyp.com/sitec"
 )
@@ -59,7 +60,7 @@ type App struct{}
 func (a *App) RenderCSS() *css.Stylesheet { return css.NewStylesheet() }
 `)
 	if workerName != "" {
-		write(filepath.Join(root, "web/workers", workerName, "main.go"), "package main\nfunc main() {}")
+		write(filepath.Join(root, sitec.WorkersDir, workerName, "main.go"), "//go:build wasm && tinygo\n\npackage main\nfunc main() {}\n")
 	}
 
 	cmd := exec.Command("go", "mod", "tidy")
@@ -220,5 +221,95 @@ func TestWorkers_NoWorkersNoOutput(t *testing.T) {
 		if strings.Contains(a.Path, "worker") || strings.Contains(a.Path, "echo") {
 			t.Errorf("Expected no worker artifacts, got %s", a.Path)
 		}
+	}
+}
+
+// writeWorkerLibrary writes, next to root, a library module example.com/<name> that ships
+// webworker/main.go, requires it from the app with a replace and, when imported, makes an app
+// package import it.
+func writeWorkerLibrary(t *testing.T, root, name string, imported bool) {
+	t.Helper()
+	libDir := filepath.Join(filepath.Dir(root), "lib-"+name)
+	modPath := "example.com/" + name
+	files := map[string]string{
+		filepath.Join(libDir, "go.mod"):               "module " + modPath + "\n\ngo 1.22\n",
+		filepath.Join(libDir, name+".go"):             "package " + name + "\n\nfunc Ready() bool { return true }\n",
+		filepath.Join(libDir, "webworker", "main.go"): "//go:build wasm && tinygo\n\npackage main\n\nfunc main() {}\n",
+	}
+	if imported {
+		files[filepath.Join(root, "uses"+name, "uses.go")] = "package uses" + name + "\n\nimport \"" + modPath + "\"\n\nvar _ = " + name + ".Ready\n"
+	}
+	for p, src := range files {
+		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte(src), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, args := range [][]string{
+		{"mod", "edit", "-require=" + modPath + "@v0.0.0", "-replace=" + modPath + "=" + libDir},
+		{"mod", "tidy"},
+	} {
+		cmd := exec.Command("go", args...)
+		cmd.Dir = root
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("go %v: %v %s", args, err, out)
+		}
+	}
+}
+
+// A library that ships webworker/main.go becomes /<library>.wasm + /<library>.worker.js as soon
+// as the app's build reaches it; the app writes nothing.
+func TestFindWebWorkers_LibraryReachedByTheBuild(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "app")
+	writeWorkerFixture(t, root, "")
+	writeWorkerLibrary(t, root, "pdflib", true)
+
+	workers, err := sitec.FindWebWorkers(root, sitec.NewExecToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(workers) != 1 || workers[0] != (sitec.WebWorker{Name: "pdflib", Package: "example.com/pdflib/webworker", Runtime: js.RuntimeTinyGo}) {
+		t.Fatalf("FindWebWorkers = %+v, want the pdflib Web Worker", workers)
+	}
+
+	c := sitec.NewCompiler(&sitec.Config{RootDir: root, OutputDir: "web/public", DevMode: true})
+	c.SetFS(sitec.NewMemFS())
+	if err := c.BuildWorkers(); err != nil {
+		t.Fatal(err)
+	}
+	if script, _, ok := c.Read("/pdflib.worker.js"); !ok || !strings.Contains(string(script), "/pdflib.wasm") {
+		t.Errorf("/pdflib.worker.js missing or not pointing at /pdflib.wasm")
+	}
+	if _, _, ok := c.Read("/pdflib.wasm"); !ok {
+		t.Errorf("/pdflib.wasm was not built")
+	}
+}
+
+// A library the build does not reach ships nothing, even if it is in go.mod.
+func TestFindWebWorkers_UnreachedLibraryShipsNothing(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "app")
+	writeWorkerFixture(t, root, "")
+	writeWorkerLibrary(t, root, "pdflib", false)
+
+	workers, err := sitec.FindWebWorkers(root, sitec.NewExecToolchain())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(workers) != 0 {
+		t.Errorf("FindWebWorkers = %+v, want none", workers)
+	}
+}
+
+// The app's own Worker and a library's Worker with the same name collide: the error names both.
+func TestFindWebWorkers_DuplicateNameIsAnError(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "app")
+	writeWorkerFixture(t, root, "pdflib")
+	writeWorkerLibrary(t, root, "pdflib", true)
+
+	_, err := sitec.FindWebWorkers(root, sitec.NewExecToolchain())
+	if err == nil || !strings.Contains(err.Error(), "./"+sitec.WorkersDir+"/pdflib") || !strings.Contains(err.Error(), "example.com/pdflib/webworker") {
+		t.Errorf("want an error naming both Workers, got: %v", err)
 	}
 }

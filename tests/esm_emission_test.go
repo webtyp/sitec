@@ -100,7 +100,7 @@ func TestSitec_KeepsLazyWasmWorkers(t *testing.T) {
 		scripts: []*js.Script{
 			{Name: "", Content: "export const app = true;", Module: true},
 			js.LazyWorkerClient("pdf_client.js", "/pdf.worker.js"),
-			js.WebWorker("pdf.worker.js", "/pdf.wasm"),
+			js.WebWorker("pdf.worker.js", "/pdf.wasm", js.RuntimeTinyGo),
 		},
 	})
 	if err != nil {

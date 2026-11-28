@@ -39,6 +39,13 @@ func (m *memFS) Read(path string) ([]byte, string, bool) {
 	return art.Content, art.Mediatype, true
 }
 
+func (m *memFS) Remove(path string) error {
+	m.mu.Lock()
+	delete(m.artifacts, path)
+	m.mu.Unlock()
+	return nil
+}
+
 func (m *memFS) List() []Artifact {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -123,6 +130,16 @@ func (o *osFS) Read(path string) ([]byte, string, bool) {
 		mt = "text/html"
 	}
 	return content, mt, true
+}
+
+func (o *osFS) Remove(path string) error {
+	o.mu.Lock()
+	delete(o.artifacts, path)
+	o.mu.Unlock()
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func (o *osFS) List() []Artifact {

@@ -11,7 +11,7 @@ require (
 	webtyp.com/font v0.0.5
 	webtyp.com/html v0.0.34
 	webtyp.com/image v0.1.16
-	webtyp.com/js v0.1.7
+	webtyp.com/js v0.1.8
 	webtyp.com/lang v0.1.22
 	webtyp.com/modfind v0.0.11
 	webtyp.com/pwa v0.2.24

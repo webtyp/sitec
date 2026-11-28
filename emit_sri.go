@@ -4,7 +4,9 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"webtyp.com/lang"
@@ -102,15 +104,32 @@ func (c *Compiler) assetURL(filename string) string {
 	return path.Join(c.AssetsURLPrefix, filename)
 }
 
+// Base names of the files sitec writes under a content-hashed name. Only one version of each is
+// ever kept in the output directory (pruneStaleVersions).
+const (
+	spriteBaseName = "sprite.svg"
+	langBaseName   = "lang.json"
+)
+
+var hashedBaseNames = []string{spriteBaseName, langBaseName}
+
 func (c *Compiler) upsertHashedAssetLocked(slot **asset, baseName, mediatype string, content []byte) string {
+	hashedName := ""
+	if len(content) > 0 {
+		hashedName = pwa.HashedName(baseName, content)
+	}
 	if *slot != nil {
-		delete(c.allAssets, (*slot).outputPath)
+		old := (*slot).outputPath
+		delete(c.allAssets, old)
+		// The replaced version leaves the mirrored disk too: its name will never be asked again.
+		if r, ok := c.fs.(fileRemover); ok && c.diskMirrored && filepath.Base(old) != hashedName {
+			_ = r.Remove(old)
+		}
 	}
 	if len(content) == 0 {
 		*slot = nil
 		return ""
 	}
-	hashedName := pwa.HashedName(baseName, content)
 	a := newAssetFile(hashedName, mediatype, c.Config, nil)
 	a.urlPath = c.assetURL(hashedName)
 	a.contentMiddle = []*ContentFile{{Path: baseName, Content: content}}
@@ -131,7 +150,7 @@ func (c *Compiler) refreshSpriteAssetLocked() {
 			content = minBytes
 		}
 	}
-	c.spriteURL = c.upsertHashedAssetLocked(&c.spriteAsset, "sprite.svg", "image/svg+xml", content)
+	c.spriteURL = c.upsertHashedAssetLocked(&c.spriteAsset, spriteBaseName, "image/svg+xml", content)
 	svg.SetSpriteURL(c.spriteURL)
 	if c.spriteURL != "" && c.indexHtmlHandler != nil {
 		for _, cf := range c.indexHtmlHandler.contentMiddle {
@@ -144,7 +163,7 @@ func (c *Compiler) refreshSpriteAssetLocked() {
 }
 
 func (c *Compiler) refreshLangAssetLocked(payload []byte) {
-	c.translationsURL = c.upsertHashedAssetLocked(&c.langAsset, "lang.json", "application/json", payload)
+	c.translationsURL = c.upsertHashedAssetLocked(&c.langAsset, langBaseName, "application/json", payload)
 }
 
 func (c *Compiler) refreshSecurityAssetsLocked() {
@@ -282,4 +301,44 @@ func updateReleaseIntegrityInHTML(htmlStr, tagPrefix, attrName, url, sri string)
 	}
 	insertAt := idx + len(needle)
 	return htmlStr[:insertAt] + ` integrity="` + sri + `" crossorigin="anonymous"` + htmlStr[insertAt:]
+}
+
+// isVersionOf reports whether file is base under a content-hashed name: sprite.3f9a1c2b.svg is a
+// version of sprite.svg; sprite.svg.bak and spritex.3f9a1c2b.svg are not.
+func isVersionOf(file, base string) bool {
+	ext := path.Ext(base)
+	stem := strings.TrimSuffix(base, ext)
+	return len(file) == len(stem)+1+pwa.HashLen+len(ext) &&
+		strings.HasPrefix(file, stem+".") && strings.HasSuffix(file, ext) && pwa.IsHashedName(file)
+}
+
+// pruneStaleVersions removes from dir every version of a hashed file that is not in keep: the ones
+// earlier sessions of webtyp dev mirrored there, which this process never wrote.
+func (c *Compiler) pruneStaleVersions(dir string, keep map[string]bool) error {
+	r, ok := c.fs.(fileRemover)
+	if !ok {
+		return nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || keep[name] {
+			continue
+		}
+		for _, base := range hashedBaseNames {
+			if isVersionOf(name, base) {
+				if err := r.Remove(filepath.Join(dir, name)); err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+	return nil
 }

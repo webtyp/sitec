@@ -16,15 +16,15 @@ import (
 // BUG capturado: un shell de app WASM (un solo index.html, sin RenderPages)
 // sirviéndose DESDE MEMORIA (NewMemFS, diskMirrored=false):
 //
-//   1. RouteExtractedAssets, al no haber páginas, reescribe
-//      mainJsHandler.urlPath / mainStyleCssHandler.urlPath a RELATIVOS
-//      ("script.js", "style.css") — correcto para las referencias del HTML.
-//   2. El servidor pregunta a Read con la clave ABSOLUTA que llega por HTTP
-//      ("/script.js"). El match del bucle allAssets compara
-//      a.GetURLPath()=="script.js" con "/script.js" y falla; a.outputPath es
-//      "<OutputDir>/script.js" y tampoco coincide con "/script.js".
-//   3. processAsset sólo escribe en c.fs `if c.diskMirrored`, así que en
-//      modo memoria el fallback c.fs.Read("script.js") tampoco lo encuentra.
+//  1. RouteExtractedAssets, al no haber páginas, reescribe
+//     mainJsHandler.urlPath / mainStyleCssHandler.urlPath a RELATIVOS
+//     ("script.js", "style.css") — correcto para las referencias del HTML.
+//  2. El servidor pregunta a Read con la clave ABSOLUTA que llega por HTTP
+//     ("/script.js"). El match del bucle allAssets compara
+//     a.GetURLPath()=="script.js" con "/script.js" y falla; a.outputPath es
+//     "<OutputDir>/script.js" y tampoco coincide con "/script.js".
+//  3. processAsset sólo escribe en c.fs `if c.diskMirrored`, así que en
+//     modo memoria el fallback c.fs.Read("script.js") tampoco lo encuentra.
 //
 // Resultado: Read("/script.js") y Read("/style.css") devuelven ok=false. El
 // navegador descarga browser.wasm y nunca lo instancia (falta el bootstrap);
@@ -38,8 +38,8 @@ func TestCaso1_ReadSirveGlueYCssRelativizadosDesdeMemoria(t *testing.T) {
 	am := NewCompiler(&Config{OutputDir: t.TempDir()})
 	am.SetFS(NewMemFS()) // modo memoria: diskMirrored permanece false
 
-	// El demonio registra el bootstrap del WASM así (section-build.go).
-	if err := am.UpdateSSRModule("bootstrap", "", []*js.Script{js.PageBootstrap(js.DefaultWasmURL)}, "", nil); err != nil {
+	// El demonio registra el módulo de la página (goesm) así (section-build.go).
+	if err := am.UpdateSSRModule("bootstrap", "", []*js.Script{{Name: "", Content: pageModuleFixture, Module: true}}, "", nil); err != nil {
 		t.Fatalf("UpdateSSRModule(bootstrap): %v", err)
 	}
 
@@ -66,11 +66,11 @@ func TestCaso1_ReadSirveGlueYCssRelativizadosDesdeMemoria(t *testing.T) {
 		}
 	}
 
-	// El bootstrap debe llevar el runtime que instancia el .wasm.
+	// script.js debe llevar el módulo de la página que se registró.
 	if content, _, ok := am.Read("/script.js"); ok {
 		s := string(content)
-		if !containsAny(s, "WebAssembly", "instantiate", "wasm_exec") {
-			t.Errorf("/script.js no contiene el bootstrap del WASM:\n%.300s", s)
+		if !containsAny(s, pageModuleExport) {
+			t.Errorf("/script.js no contiene el módulo de la página:\n%q", s)
 		}
 	}
 }
@@ -85,3 +85,10 @@ func containsAny(s string, subs ...string) bool {
 	}
 	return false
 }
+
+// pageModuleFixture hace de salida de goesm: lo que importa es que se sirva desde memoria.
+// pageModuleExport es el nombre que sobrevive a la minificación (true pasa a !0).
+const (
+	pageModuleFixture = "export const " + pageModuleExport + " = true;"
+	pageModuleExport  = "pageReady"
+)

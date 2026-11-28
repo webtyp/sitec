@@ -80,10 +80,15 @@ func (c *Compiler) FlushToDisk() error {
 
 	sort.Slice(snapshots, func(i, j int) bool { return snapshots[i].path < snapshots[j].path })
 
+	keep := make(map[string]bool, len(snapshots))
 	for _, s := range snapshots {
 		if err := c.fs.Write(s.path, s.content, s.mediatype); err != nil {
 			return fmt.Errorf("FlushToDisk %s: %w", s.path, err)
 		}
+		keep[filepath.Base(s.path)] = true
+	}
+	if err := c.pruneStaleVersions(c.OutputDir, keep); err != nil {
+		return fmt.Errorf("FlushToDisk: removing old hashed versions: %w", err)
 	}
 
 	c.mu.Lock()

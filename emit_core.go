@@ -151,9 +151,6 @@ type Compiler struct {
 	faviconMu           sync.RWMutex
 	noLogoHinted        bool // the notice of an app without an icon was already said; guarded by faviconMu
 	fs                  FS
-	wasmFilename        string
-	wasmRuntime         string
-	wasmMu              sync.Mutex
 	directArtifacts     []Artifact // pre-built binaries written via Write(), e.g. the WASM binary
 	translationsMu      sync.RWMutex
 	translations        Translations // nil: no dictionary is emitted
@@ -181,13 +178,6 @@ func (c *Compiler) MinifyEnabled() bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.minifyEnabled
-}
-
-func (c *Compiler) SetWasm(filename string, runtime string) {
-	c.wasmMu.Lock()
-	defer c.wasmMu.Unlock()
-	c.wasmFilename = filename
-	c.wasmRuntime = runtime
 }
 
 type ImageProcessor interface {

@@ -188,15 +188,7 @@ func (c *Compiler) UnobservedFiles() []string {
 }
 
 func (c *Compiler) startCodeJS() (out string, err error) {
-	c.wasmMu.Lock()
-	runtime := c.wasmRuntime
-	c.wasmMu.Unlock()
-
-	out = js.UseStrictPrefix
-	if runtime != "" {
-		out += "\n" + runtime
-	}
-	return
+	return js.UseStrictPrefix, nil
 }
 
 // clear memory files

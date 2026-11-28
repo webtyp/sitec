@@ -9,20 +9,15 @@ type Toolchain interface {
 	Run(dir string, args ...string) ([]byte, error)
 }
 
-// WasmBuilder produce el binario del cliente Y el runtime JS que lo carga.
-// sitec decide sus rutas, sus nombres y su sink; CÓMO compilarlo (TinyGo vs Go,
-// flags) es del adaptador.
+// WasmBuilder compila con TinyGo un Web Worker o el Worker del edge. La página
+// nunca es WebAssembly: web/browser se compila a ES Module con goesm.
 type WasmBuilder interface {
 	Build(dir string) (WasmOutput, error)
 }
 
-// WasmOutput son los DOS artefactos de una compilación. Van juntos a propósito:
-// TinyGo y Go estándar emiten runtimes wasm_exec distintos, así que un binario
-// servido con el loader del otro modo no arranca. Devolverlos por separado
-// permitiría emparejarlos mal.
+// WasmOutput es el binario compilado y su nombre (con hash si se pidió). El
+// pegamento que lo arranca lo pone quien lo sirve (js.WebWorker), siempre el de TinyGo.
 type WasmOutput struct {
 	Binary   []byte // el .wasm
-	Filename string // su nombre, que el shell HTML referencia
-	Runtime  string
-	IsModule bool // el glue JS correspondiente al modo usado
+	Filename string // su nombre, que el script del Worker referencia
 }

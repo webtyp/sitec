@@ -12,10 +12,10 @@ flowchart TD
     Reg --> RT["Inject js.RuntimeScript() (/runtime.js)"]
     Reg --> HTML["buildHTMLShell(jsIsModule: true)"]
     HTML --> Out["<script src=... integrity=sha384-... type=module>"]
-    Workers["web/workers/<name>/main.go"] --> Lazy["/pdf.worker.js + /pdf.wasm (lazy)"]
+    Workers["web/webworkers/<name>/main.go\n<library>/webworker/main.go"] --> Lazy["/pdf.worker.js + /pdf.wasm (lazy)"]
 ```
 
 1. Any provider returning `js.Script{Module: true}` activates ESM mode on `Compiler` and ensures `runtime.js` is emitted once.
 2. `Compiler.CompileESMPackage(dir)` hashes the Go sources in `dir`, reuses cached ESM output on unchanged files, and recompiles via `webtyp/js/esm` on changes.
 3. `buildHTMLShell` emits `<script type="module">` with `integrity="sha384-..."` and `crossorigin="anonymous"` (zero inline JS).
-4. Lazy WASM Workers under `web/workers/` continue building independently (`/pdf.wasm` + `/pdf.worker.js`) without requiring `browser.wasm`.
+4. Lazy Web Workers (`web/webworkers/` of the app, `webworker/` of each reached library) build independently (`/pdf.wasm` + `/pdf.worker.js`), each with the compiler its `main.go` declares.

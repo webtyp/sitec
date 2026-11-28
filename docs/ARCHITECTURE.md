@@ -226,11 +226,13 @@ In development the daemon's `Compiler` writes `/artifacts.json` the same way (at
 
 Heavy workloads (like ML inference, D16) should run off the main thread to preserve UI framerates. SIMD execution for these models gives a ~2× end-to-end performance boost, but not all browsers support it yet.
 
-A project defines Workers by placing `main.go` inside direct subdirectories of `web/workers/`. For example, `web/workers/echo/main.go` declares a worker named `echo`.
+Web Workers are the only WebAssembly a webtyp app ships (the page and the edge are goesm ES Modules). `FindWebWorkers` returns the project's own (`web/webworkers/<name>/main.go`) and those of every library its build reaches that ships `webworker/main.go` (same build targets and destination tags as `reach.go`, via `go list -deps -f`); a duplicate name is an error naming both. Each `main.go` declares its compiler on its `//go:build` line — `wasm && tinygo` or `wasm && !tinygo` — read by `WorkerRuntime`; anything else is an error showing both lines. Every Worker package compiles from the project root, so a library's Worker uses the app's dependency versions.
 
-In release mode, `sitec` compiles each worker twice:
+In release mode, `sitec` compiles each TinyGo worker twice:
 1. A **SIMD** version (TinyGo `+simd128`, `-opt=2`) for modern browsers.
 2. A **plain** version (`-opt=2`) for legacy support.
+
+A Go worker is compiled once (Go has no WebAssembly SIMD) and both scripts load it.
 
 This produces four artifacts per worker:
 - Two JavaScript bootstraps (static names, revalidated): `<name>.worker.js` and `<name>.simd.worker.js`.
@@ -269,4 +271,4 @@ When serving release artifacts, the serving layer should configure HTTP response
 
 - When any `RenderJS()` provider returns `js.Script{Module: true}`, `Compiler` switches the HTML shell to `<script type="module" integrity="sha384-..." crossorigin="anonymous">` and auto-registers `js.RuntimeScript()` (`/runtime.js`).
 - `Compiler.CompileESMPackage(dir)` compiles strict-subset Go packages through `webtyp/js/esm` with content-hash caching (`esm_cache.go`).
-- Lazy WASM Workers (`web/workers/<name>/main.go`, `js.WebWorker`) continue emitting independently without requiring `browser.wasm`.
+- Lazy Web Workers (`web/webworkers/<name>/main.go` or a library's `webworker/main.go`, `js.WebWorker`) emit independently; the page never compiles to WebAssembly.

@@ -95,13 +95,15 @@ func ArtifactSources() []artifacts.Source {
 
 ## Web Workers
 
-El código pesado (modelos, inferencia) se extrae del hilo principal. Una convención de directorios registra los workers: cualquier subdirectorio bajo `web/workers/` que contenga un `main.go` se compila. El nombre del subdirectorio es el nombre del worker (ej. `web/workers/echo/main.go` → worker `echo`).
+El código pesado (PDF, modelos, inferencia) corre fuera del hilo principal, en un Web Worker: es lo único que se compila a WebAssembly (la página y el edge son ES Modules de `goesm`). `sitec.FindWebWorkers` los encuentra solo:
+- los de la app: cada `web/webworkers/<nombre>/main.go` (ej. `web/webworkers/echo/main.go` → worker `echo`);
+- los de las librerías: cada librería que el build de la app alcanza y trae `webworker/main.go` (ej. `webtyp.com/pdf/webworker` → `/pdf.wasm` + `/pdf.worker.js`). La app no escribe nada. Dos workers con el mismo nombre son un error que nombra ambos.
 
-En release, `sitec` compila cada worker dos veces:
-1. Una versión **SIMD** (TinyGo `+simd128`, `-opt=2`) para navegadores modernos, que duplica el rendimiento de los modelos (D16).
-2. Una versión **plana** (`-opt=2`) como fallback.
+Cada `main.go` declara su compilador en la primera línea, y sin ella `sitec` falla mostrando las dos opciones:
+- `//go:build wasm && tinygo` — binario chico y SIMD. En release se compila dos veces: **SIMD** (`+simd128`, `-opt=2`, D16) y **plana** (`-opt=2`); en desarrollo una vez, con SIMD, como `<nombre>.wasm`.
+- `//go:build wasm && !tinygo` — la librería estándar completa de Go. Go no tiene SIMD para WebAssembly: se compila una vez y los dos scripts la cargan.
 
-En desarrollo (`webtyp dev`, vía `Compiler.BuildWorkers`) cada worker se compila una sola vez con TinyGo, SIMD y `-opt=2` como `<name>.wasm`, y los dos scripts lo cargan.
+El script de cada worker lleva el `wasm_exec.js` de su compilador (`js.WebWorker(nombre, url, js.RuntimeTinyGo | js.RuntimeGo)`).
 
 Produce cuatro archivos por worker:
 - El script arrancador: `<name>.worker.js` (apunta a la versión plana).
